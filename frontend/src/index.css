@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+:root {
+  /* Premium Design Tokens */
+  --primary: #4F46E5;
+  --status-open: #EF4444;
+  --status-assigned: #F59E0B;
+  --status-closed: #10B981;
+  --status-breached: #DC2626;
+
+  --bg-color: #F8FAFC;
+  --card-bg: #FFFFFF;
+  --border-color: #E5E7EB;
+
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+
+  /* 8-pt Grid Spacing Scale (Reference)
+     4px (micro) | 8px (tight) | 16px (standard) 
+     24px (section) | 32px (major) | 48px (page) */
+}
+
+/* Base Typogprahy & Body */
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations (High Polish Motion System) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.table-reflow-enter {
+  animation: fadeInUp 250ms ease-out forwards;
+}
+
+/* Dropdown/Menu smooth enter */
+.ant-dropdown-menu,
+.ant-select-dropdown {
+  animation: fadeInUp 200ms ease-out forwards;
+}
+
+/* Ant Design Strict Overrides */
+.ant-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--card-bg) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.ant-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-2px);
+}
+
+.ant-layout {
+  background: var(--bg-color) !important;
+}
+
+.ant-layout-header {
+  background: white !important;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px !important;
+}
+
+.ant-layout-sider {
+  background: white !important;
+  border-right: 1px solid var(--border-color);
+}
+
+.ant-menu {
+  background: transparent !important;
+  border-right: 0 !important;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  font-size: 14px;
+}
+
+.ant-table-thead>tr>th {
+  background: #F1F5F9 !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+.ant-drawer-content {
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.ant-tag {
+  border-radius: 6px !important;
+}
+
+.ant-btn {
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-btn:active {
+  transform: scale(0.97);
+}
+
+/* Typography Token Utilities */
+h1,
+.page-title {
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+}
+
+h2,
+.section-header {
+  font-size: 20px !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+}
+
+.kpi-number {
+  font-size: 32px !important;
+  font-weight: 700 !important;
+}
+
+.helper-text {
+  font-size: 12px !important;
+  color: var(--text-secondary) !important;
+}
+/* --- TECHNICIAN MOBILE & OVERRIDE STYLES --- */
+.mobile-optimized-table .ant-table-thead > tr > th {
+    background: #F8FAFC;
+    color: #64748B;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 2px solid #F1F5F9;
+}
+
+@media (max-width: 768px) {
+    /* Stack tables into cards on Mobile */
+    .mobile-optimized-table .ant-table-thead {
+        display: none;
+    }
+    .mobile-optimized-table .ant-table-tbody > tr {
+        display: block;
+        margin-bottom: 16px;
+        background: white;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .mobile-optimized-table .ant-table-tbody > tr > td {
+        display: block;
+        text-align: left;
+        border: none;
+        padding: 4px 0;
+    }
+    .mobile-optimized-table .ant-table-tbody > tr > td:last-child {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed #E2E8F0;
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+.custom-technician-drawer .ant-drawer-header {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.custom-technician-drawer .ant-drawer-body {
+    padding-top: 16px;
+}
+.custom-technician-drawer .ant-drawer-footer {
+    border-top: 1px solid #F1F5F9;
+    padding: 16px 24px;
+    background: #F8FAFC;
+}
+
