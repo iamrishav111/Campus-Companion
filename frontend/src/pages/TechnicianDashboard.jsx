@@ -108,7 +108,7 @@ const TechnicianDashboard = () => {
                 if (response.ok) {
                     const data = await response.json();
                     const liveTickets = data.map(mapApiTicket);
-                    setTickets([...initialTechTickets, ...liveTickets]);
+                    setTickets([...liveTickets, ...initialTechTickets]);
                 }
             } catch (error) {
                 console.error("Failed to fetch live tickets", error);

@@ -112,7 +112,7 @@ const AdminDashboard = () => {
                 if (response.ok) {
                     const data = await response.json();
                     const liveTickets = data.map(mapApiTicket);
-                    setTickets([...initialTickets, ...liveTickets]);
+                    setTickets([...liveTickets, ...initialTickets]);
                 }
             } catch (error) {
                 console.error("Failed to fetch live tickets", error);

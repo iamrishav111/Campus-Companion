@@ -169,8 +169,12 @@ const MainLayout = ({ role }) => {
                                     description={
                                         <div className="space-y-2 mt-4">
                                             <Title level={4} className="text-slate-700 m-0">🚧 Feature coming soon</Title>
-                                            <Text type="secondary" className="block">
-                                                The <strong>{moduleOptions.find(o => o.value === currentModule)?.label}</strong> module is currently under development.
+                                            <Text type="secondary" className="block text-center whitespace-normal leading-relaxed">
+                                                The <strong>
+                                                    {currentModule === 'mess' ? 'Mess' :
+                                                        currentModule === 'recreation' ? 'Rec Centre' :
+                                                            currentModule === 'academic' ? 'Academic Block' : 'Hostel'}
+                                                </strong> module is currently under development.
                                             </Text>
                                         </div>
                                     }
