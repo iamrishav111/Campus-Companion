@@ -44,26 +44,30 @@ This project was bootstrapped with **Vite** leveraging the **React** template.
 ## 📂 Project Structure
 
 ```text
-campus-companion/
-├── frontend/                     # Main Web Application directory
-│   ├── index.html                # App entry document
-│   ├── vite.config.js            # Vite build constraints
-│   ├── src/
-│   │   ├── App.jsx               # Global Routing map definitions (/admin & /technician routes)
-│   │   ├── index.css             # Tailwind Directives + Custom Global motion tokens & breakpoints
-│   │   ├── layouts/
-│   │   │   └── MainLayout.jsx    # Stateful structural layout with responsive Sider & Header
-│   │   └── pages/
-│   │       ├── Login.jsx                 # Secure entry gate with Dummy Auth logic
-│   │       ├── AdminDashboard.jsx        # Data grid, KPI matrix, filters, Most Common Issues chart
-│   │       ├── AnalyticsDashboard.jsx   # Standalone Boardroom presentation graphs
-│   │       ├── TechnicianDashboard.jsx   # Mobile-first ticket handler with inline action grids
-│   │       └── TechnicianHistory.jsx     # Read-only closed history log
-│   └── ...
-├── backend/                      # API / Data logic container (For future development)
-│   ├── app.py                    # Placeholder backend entry
-│   └── requirements.txt
-└── README.md                     # You are here
+Campus Companion/
+├── backend/
+│   ├── app.py                     # Your friend's Python FastAPI server
+│   └── requirements.txt           # Python backend dependencies
+│
+├── frontend/                      # The React Frontend (Vite)
+│   ├── index.html                 # Main HTML entry
+│   ├── package.json               # Node.js dependencies & scripts
+│   ├── vite.config.js             # Vite bundler configuration
+│   ├── eslint.config.js           # Linter configuration
+│   └── src/
+│       ├── main.jsx               # React application mounting point
+│       ├── App.jsx                # Global Router & Navigation setup
+│       ├── index.css              # Global Tailwind CSS styles
+│       ├── layouts/
+│       │   └── MainLayout.jsx     # Global Sidebar & Top Navigation wrapper
+│       └── pages/
+│           ├── Login.jsx              # Admin Access Portal
+│           ├── AdminDashboard.jsx     # Main Ticket Pipeline
+│           ├── TechnicianDashboard.jsx# Technician-facing task board
+│           ├── AnalyticsDashboard.jsx # Advanced Metrics & Insights
+│           └── TechnicianHistory.jsx  # Technician's resolved tickets log
+│
+└── README.md                      # Project documentation
 ```
 
 ---
