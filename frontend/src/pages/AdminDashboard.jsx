@@ -30,17 +30,63 @@ const { TextArea } = Input;
 const generateDummyTickets = () => {
     return [
         { id: 'TKT-1001', category: 'AC', summary: 'AC not cooling in Room 201', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(2, 'hour').toISOString(), created_at: dayjs().subtract(3, 'hour').toISOString(), urgency: 'High', room: '201', description: 'The AC blows warm air.' },
-        { id: 'TKT-1002', category: 'Water Cooler', summary: 'Water leaking on 3rd floor', status: 'Assigned', assigned_to: 'tech_01', sla_deadline: dayjs().subtract(1, 'hour').toISOString(), created_at: dayjs().subtract(5, 'hour').toISOString(), urgency: 'High', room: '3rd Floor Lobby', description: 'Massive puddle forming.', resolved_time_hours: null },
-        { id: 'TKT-1003', category: 'Cleaning', summary: 'Room 405 needs deep clean', status: 'Closed', assigned_to: 'tech_02', sla_deadline: dayjs().subtract(1, 'day').toISOString(), created_at: dayjs().subtract(2, 'day').toISOString(), urgency: 'Low', room: '405', description: 'Dust everywhere post holiday.', resolved_time_hours: 4 },
+        { id: 'TKT-1002', category: 'Water Cooler', summary: 'Water leaking on 3rd floor', status: 'Assigned', assigned_to: 'Tech 04 (Water Cooler)', sla_deadline: dayjs().subtract(1, 'hour').toISOString(), created_at: dayjs().subtract(5, 'hour').toISOString(), urgency: 'High', room: '3rd Floor Lobby', description: 'Massive puddle forming.', resolved_time_hours: null },
+        { id: 'TKT-1003', category: 'Cleaning', summary: 'Room 405 needs deep clean', status: 'Closed', assigned_to: 'Tech 06 (Cleaning)', sla_deadline: dayjs().subtract(1, 'day').toISOString(), created_at: dayjs().subtract(2, 'day').toISOString(), urgency: 'Low', room: '405', description: 'Dust everywhere post holiday.', resolved_time_hours: 4 },
         { id: 'TKT-1004', category: 'AC', summary: 'Strange noise from vent', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(5, 'hour').toISOString(), created_at: dayjs().subtract(1, 'hour').toISOString(), urgency: 'Medium', room: '102', description: 'Clicking sound constantly.' },
-        { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Assigned', assigned_to: 'tech_03', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'hour').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: null },
-        { id: 'TKT-1006', category: 'AC', summary: 'Thermostat unresponsive', status: 'Closed', assigned_to: 'tech_01', sla_deadline: dayjs().subtract(2, 'day').toISOString(), created_at: dayjs().subtract(3, 'day').toISOString(), urgency: 'High', room: '205', description: 'Cannot change temp.', resolved_time_hours: 2 },
-        { id: 'TKT-1007', category: 'Water Cooler', summary: 'Not dispensing cold water', status: 'Closed', assigned_to: 'tech_02', sla_deadline: dayjs().subtract(5, 'day').toISOString(), created_at: dayjs().subtract(6, 'day').toISOString(), urgency: 'Medium', room: 'Ground Floor', description: 'Water is room temp.', resolved_time_hours: 6 },
-        { id: 'TKT-1008', category: 'Electrical', summary: 'Socket burned out', status: 'Closed', assigned_to: 'tech_03', sla_deadline: dayjs().subtract(10, 'day').toISOString(), created_at: dayjs().subtract(11, 'day').toISOString(), urgency: 'High', room: '304', description: 'Smells like smoke.', resolved_time_hours: 1 },
+        { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Assigned', assigned_to: 'Tech 02 (Electrical)', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'hour').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: null },
     ];
 };
 
 const initialTickets = generateDummyTickets();
+
+// --- API HELPERS ---
+const getCategory = (rawCat) => {
+    if (!rawCat) return 'Other';
+    const lower = rawCat.toLowerCase();
+    switch (lower) {
+        case 'ac': return 'AC';
+        case 'cleaning': return 'Cleaning';
+        case 'water_disp': return 'Water Cooler';
+        case 'water cooler': return 'Water Cooler';
+        case 'wifi': return 'Wifi';
+        case 'wash_mach': return 'Washing Machine';
+        case 'washing machine': return 'Washing Machine';
+        case 'geyser': return 'Electrical';
+        case 'electrical': return 'Electrical';
+        default: return rawCat;
+    }
+};
+
+const getAssignedTech = (mappedCategory) => {
+    switch (mappedCategory) {
+        case 'Water Cooler': return 'Tech 04 (Water Cooler)';
+        case 'Washing Machine': return 'Tech 05 (Washing Machine)';
+        case 'Cleaning': return 'Tech 06 (Cleaning)';
+        case 'Wifi': return 'Tech 07 (Wifi)';
+        case 'AC': return 'Tech 01 (AC)';
+        case 'Electrical': return 'Tech 02 (Electrical)';
+        default: return `Tech 00 (${mappedCategory})`;
+    }
+};
+
+const mapApiTicket = (data) => {
+    const mappedCategory = getCategory(data.category);
+    const toSentenceCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+    return {
+        id: data.id.substring(0, 8).toUpperCase(), // Simplify UUID
+        raw_id: data.id, // Backend exact ID
+        category: mappedCategory,
+        summary: `${toSentenceCase(data.description)} in ${data.room}`,
+        status: data.status,
+        assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
+        sla_deadline: data.created_at ? dayjs(data.created_at).add(4, 'hour').toISOString() : dayjs().add(2, 'hour').toISOString(), // Setup dummy SLA based on creation for demo
+        created_at: data.created_at || new Date().toISOString(),
+        urgency: data.priority === 'high' ? 'High' : (data.priority === 'low' ? 'Low' : 'Medium'),
+        room: data.room,
+        description: data.description,
+        resolved_time_hours: data.status === 'Closed' ? 2 : null
+    };
+};
 
 const AdminDashboard = () => {
     const [tickets, setTickets] = useState(initialTickets);
@@ -60,7 +106,23 @@ const AdminDashboard = () => {
     const [form] = Form.useForm();
 
     useEffect(() => {
-        setTimeout(() => setLoading(false), 800);
+        const fetchTickets = async () => {
+            try {
+                const response = await fetch('https://campus-companion-backend-nk3b.onrender.com/tickets');
+                if (response.ok) {
+                    const data = await response.json();
+                    const liveTickets = data.map(mapApiTicket);
+                    setTickets([...initialTickets, ...liveTickets]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch live tickets", error);
+                // Fallback is just maintaining initialTickets
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTickets();
         const timer = setInterval(() => setCurrentTime(dayjs()), 60000); // Live aging update
         return () => clearInterval(timer);
     }, []);
@@ -131,6 +193,7 @@ const AdminDashboard = () => {
         form.setFieldsValue({
             status: record.status,
             assigned_to: record.assigned_to,
+            category: record.category,
             sla_deadline: record.sla_deadline ? dayjs(record.sla_deadline) : null,
             admin_notes: record.admin_notes || ''
         });
@@ -142,13 +205,14 @@ const AdminDashboard = () => {
         setEditingTicket(null);
     };
 
-    const handleUpdateTicket = (values) => {
+    const handleUpdateTicket = async (values) => {
         const updatedTickets = tickets.map(t => {
             if (t.id === editingTicket.id) {
                 return {
                     ...t,
                     status: values.status,
                     assigned_to: values.assigned_to,
+                    category: values.category,
                     sla_deadline: values.sla_deadline ? values.sla_deadline.toISOString() : t.sla_deadline,
                     admin_notes: values.admin_notes
                 };
@@ -156,6 +220,23 @@ const AdminDashboard = () => {
             return t;
         });
         setTickets(updatedTickets);
+
+        if (editingTicket.raw_id) {
+            try {
+                await fetch('https://campus-companion-backend-nk3b.onrender.com/update-ticket', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticket_id: editingTicket.raw_id,
+                        status: values.status,
+                        assigned_to: values.assigned_to
+                    })
+                });
+            } catch (error) {
+                console.error("Failed to sync Admin changes", error);
+            }
+        }
+
         message.success(`Ticket ${editingTicket.id} updated successfully`);
         onCloseDrawer();
     };
@@ -242,7 +323,7 @@ const AdminDashboard = () => {
                 return (
                     <div className="flex items-center gap-2 text-slate-500 font-medium whitespace-nowrap">
                         <ClockCircleOutlined className="text-slate-400" />
-                        <span>Opened {timeAgo} ago</span>
+                        <span>Created {timeAgo} ago</span>
                     </div>
                 );
             }
@@ -386,16 +467,16 @@ const AdminDashboard = () => {
                     >
                         <div className="w-full flex-grow relative min-h-[150px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={commonIssuesData} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }} onClick={handleChartClick}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 13, fontWeight: 500 }} width={120} />
+                                <BarChart data={commonIssuesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} onClick={handleChartClick}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 13, fontWeight: 500 }} />
+                                    <YAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 12 }} />
                                     <RechartsTooltip
                                         cursor={{ fill: '#F8FAFC' }}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                         itemStyle={{ fontWeight: 600, color: '#1E293B' }}
                                     />
-                                    <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={32} className="cursor-pointer">
+                                    <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40} className="cursor-pointer">
                                         {commonIssuesData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#94A3B8'}
                                                 style={{ opacity: filterCategory.includes(entry.name) || filterCategory.length === 0 ? 1 : 0.3 }}
@@ -405,7 +486,7 @@ const AdminDashboard = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click a horizontal bar segment above to actively filter the ticket queue below.</div>
+                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click a vertical bar segment above to actively filter the ticket queue below.</div>
                     </Card>
                 </Col>
             </Row>
@@ -452,9 +533,13 @@ const AdminDashboard = () => {
                             className="w-40"
                             maxTagCount="responsive"
                         >
-                            <Option value="tech_01">Tech 01</Option>
-                            <Option value="tech_02">Tech 02</Option>
-                            <Option value="tech_03">Tech 03</Option>
+                            <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
+                            <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
+                            <Option value="Tech 03 (Other)">Tech 03 (Other)</Option>
+                            <Option value="Tech 04 (Water Cooler)">Tech 04 (Water Cooler)</Option>
+                            <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
+                            <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
+                            <Option value="Tech 07 (Wifi)">Tech 07 (Wifi)</Option>
                         </Select>
 
                         {(filterCategory.length > 0 || filterStatus.length > 0 || filterTechnician.length > 0 || searchText || activeKpiFilter) && (
@@ -529,10 +614,6 @@ const AdminDashboard = () => {
 
                         <div className="grid grid-cols-2 gap-y-4 text-sm bg-white p-4 rounded-xl border border-slate-100">
                             <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Category</span>
-                                <span className="font-semibold text-slate-700">{editingTicket.category}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Room</span>
                                 <span className="font-semibold text-slate-700">{editingTicket.room}</span>
                             </div>
@@ -567,11 +648,26 @@ const AdminDashboard = () => {
                         </Select>
                     </Form.Item>
 
+                    <Form.Item label={<span className="font-medium text-slate-700">Category</span>} name="category" rules={[{ required: true }]}>
+                        <Select>
+                            <Option value="AC">AC</Option>
+                            <Option value="Water Cooler">Water Cooler</Option>
+                            <Option value="Cleaning">Cleaning</Option>
+                            <Option value="Electrical">Electrical</Option>
+                            <Option value="Washing Machine">Washing Machine</Option>
+                            <Option value="Wifi">Wifi</Option>
+                        </Select>
+                    </Form.Item>
+
                     <Form.Item label={<span className="font-medium text-slate-700">Assign Technician</span>} name="assigned_to">
                         <Select allowClear placeholder="Select assigned technician">
-                            <Option value="tech_01">Tech 01 (AC Specialist)</Option>
-                            <Option value="tech_02">Tech 02 (Plumber / Janitor)</Option>
-                            <Option value="tech_03">Tech 03 (Electrician)</Option>
+                            <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
+                            <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
+                            <Option value="Tech 03 (Other)">Tech 03 (Other)</Option>
+                            <Option value="Tech 04 (Water Cooler)">Tech 04 (Water Cooler)</Option>
+                            <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
+                            <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
+                            <Option value="Tech 07 (Wifi)">Tech 07 (Wifi)</Option>
                         </Select>
                     </Form.Item>
 

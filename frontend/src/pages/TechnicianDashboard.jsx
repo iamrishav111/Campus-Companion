@@ -36,8 +36,59 @@ const generateTechTickets = () => {
     ];
 };
 
+// --- API HELPERS ---
+const getCategory = (rawCat) => {
+    if (!rawCat) return 'Other';
+    const lower = rawCat.toLowerCase();
+    switch (lower) {
+        case 'ac': return 'AC';
+        case 'cleaning': return 'Cleaning';
+        case 'water_disp': return 'Water Cooler';
+        case 'water cooler': return 'Water Cooler';
+        case 'wifi': return 'Wifi';
+        case 'wash_mach': return 'Washing Machine';
+        case 'washing machine': return 'Washing Machine';
+        case 'geyser': return 'Electrical';
+        case 'electrical': return 'Electrical';
+        default: return rawCat;
+    }
+};
+
+const getAssignedTech = (mappedCategory) => {
+    switch (mappedCategory) {
+        case 'Water Cooler': return 'Tech 04 (Water Cooler)';
+        case 'Washing Machine': return 'Tech 05 (Washing Machine)';
+        case 'Cleaning': return 'Tech 06 (Cleaning)';
+        case 'Wifi': return 'Tech 07 (Wifi)';
+        case 'AC': return 'Tech 01 (AC)';
+        case 'Electrical': return 'Tech 02 (Electrical)';
+        default: return `Tech 00 (${mappedCategory})`;
+    }
+};
+
+const mapApiTicket = (data) => {
+    const mappedCategory = getCategory(data.category);
+    const toSentenceCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+    return {
+        id: data.id.substring(0, 8).toUpperCase(), // Simplify UUID
+        raw_id: data.id, // Store raw backend ID for PUT requests
+        category: mappedCategory,
+        summary: `${toSentenceCase(data.description)} in ${data.room}`,
+        status: data.status,
+        assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
+        sla_deadline: data.created_at ? dayjs(data.created_at).add(4, 'hour').toISOString() : dayjs().add(2, 'hour').toISOString(), // Setup dummy SLA based on creation for demo
+        created_at: data.created_at || new Date().toISOString(),
+        urgency: data.priority === 'high' ? 'High' : (data.priority === 'low' ? 'Low' : 'Medium'),
+        room: data.room,
+        description: data.description,
+        closed_date: data.status === 'Closed' ? (data.updated_at || new Date().toISOString()) : null
+    };
+};
+
+const initialTechTickets = generateTechTickets();
+
 const TechnicianDashboard = () => {
-    const [tickets, setTickets] = useState(generateTechTickets());
+    const [tickets, setTickets] = useState(initialTechTickets);
     const [loading, setLoading] = useState(true);
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [activeTicket, setActiveTicket] = useState(null);
@@ -51,7 +102,22 @@ const TechnicianDashboard = () => {
     const [filterOverdue, setFilterOverdue] = useState(false);
 
     useEffect(() => {
-        setTimeout(() => setLoading(false), 800);
+        const fetchTickets = async () => {
+            try {
+                const response = await fetch('https://campus-companion-backend-nk3b.onrender.com/tickets');
+                if (response.ok) {
+                    const data = await response.json();
+                    const liveTickets = data.map(mapApiTicket);
+                    setTickets([...initialTechTickets, ...liveTickets]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch live tickets", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTickets();
         const timer = setInterval(() => setCurrentTime(dayjs()), 60000);
         return () => clearInterval(timer);
     }, []);
@@ -84,16 +150,36 @@ const TechnicianDashboard = () => {
         { day: 'Sun', closed: 1 },
     ];
 
+    // --- LIVE API SYNC ---
+    const updateTicketOnBackend = async (ticketRecord, newStatus) => {
+        if (!ticketRecord.raw_id) return; // Cannot update hardcoded UI dummies reliably
+        try {
+            await fetch('https://campus-companion-backend-nk3b.onrender.com/update-ticket', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticket_id: ticketRecord.raw_id, // Use ticketRecord as per function signature
+                    status: newStatus,
+                    assigned_to: ticketRecord.assigned_to // Use ticketRecord as per function signature
+                })
+            });
+        } catch (error) {
+            console.error("Background sync failed", error);
+        }
+    };
+
     // --- ACTIONS ---
-    const handleStartWork = (id, e) => {
-        if (e) e.stopPropagation();
+    const handleStartWork = (id) => {
+        const ticket = tickets.find(t => t.id === id);
         setTickets(tickets.map(t => t.id === id ? { ...t, status: 'In Progress' } : t));
+        if (ticket) updateTicketOnBackend(ticket, 'In Progress');
         message.success(`Ticket ${id} marked as In Progress`);
     };
 
-    const handleMarkDone = (id, e) => {
-        if (e) e.stopPropagation();
+    const handleMarkDone = (id) => {
+        const ticket = tickets.find(t => t.id === id);
         setTickets(tickets.map(t => t.id === id ? { ...t, status: 'Closed', closed_date: dayjs().toISOString() } : t));
+        if (ticket) updateTicketOnBackend(ticket, 'Closed');
         message.success(<span>🎉 Ticket {id} officially closed!</span>);
     };
 
@@ -198,7 +284,7 @@ const TechnicianDashboard = () => {
                         <Button
                             type="primary"
                             size="small"
-                            onClick={(e) => handleStartWork(record.id, e)}
+                            onClick={(e) => { e.stopPropagation(); handleStartWork(record.id); }}
                             className="bg-indigo-600 font-medium rounded-lg text-xs hover:bg-indigo-700 border-0 flex items-center gap-1"
                         >
                             <PlayCircleOutlined /> Start
@@ -208,7 +294,7 @@ const TechnicianDashboard = () => {
                         <Button
                             type="primary"
                             size="small"
-                            onClick={(e) => handleMarkDone(record.id, e)}
+                            onClick={(e) => { e.stopPropagation(); handleMarkDone(record.id); }}
                             className="bg-emerald-500 font-medium rounded-lg text-xs hover:bg-emerald-600 border-0 flex items-center gap-1"
                         >
                             <CheckCircleOutlined /> Done
