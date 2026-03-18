@@ -31,7 +31,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 VERIFY_TOKEN = "campusbot"
-PHONE_NUMBER_ID = "946946368512302"
+PHONE_NUMBER_ID = "1023120327553958"
 ACCESS_TOKEN = os.environ["WHATSAPP_TOKEN"]
 
 # ================= JSON API FOR ADMIN UI =================

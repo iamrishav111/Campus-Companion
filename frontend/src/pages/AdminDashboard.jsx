@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Row, Col, Card, Typography, Statistic, Table, Tag, Button,
-    Input, Select, Space, Drawer, Form, DatePicker, message, Skeleton
+    Input, Select, Space, Drawer, Form, DatePicker, message, Skeleton, Radio
 } from 'antd';
 import {
     ContainerOutlined,
@@ -25,15 +25,16 @@ dayjs.extend(relativeTime);
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
 
 // --- DUMMY DATA SERVICES ---
 const generateDummyTickets = () => {
     return [
-        { id: 'TKT-1001', category: 'AC', summary: 'AC not cooling in Room 201', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(2, 'hour').toISOString(), created_at: dayjs().subtract(3, 'hour').toISOString(), urgency: 'High', room: '201', description: 'The AC blows warm air.' },
-        { id: 'TKT-1002', category: 'Water Cooler', summary: 'Water leaking on 3rd floor', status: 'Assigned', assigned_to: 'Tech 04 (Water Cooler)', sla_deadline: dayjs().subtract(1, 'hour').toISOString(), created_at: dayjs().subtract(5, 'hour').toISOString(), urgency: 'High', room: '3rd Floor Lobby', description: 'Massive puddle forming.', resolved_time_hours: null },
-        { id: 'TKT-1003', category: 'Cleaning', summary: 'Room 405 needs deep clean', status: 'Closed', assigned_to: 'Tech 06 (Cleaning)', sla_deadline: dayjs().subtract(1, 'day').toISOString(), created_at: dayjs().subtract(2, 'day').toISOString(), urgency: 'Low', room: '405', description: 'Dust everywhere post holiday.', resolved_time_hours: 4 },
-        { id: 'TKT-1004', category: 'AC', summary: 'Strange noise from vent', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(5, 'hour').toISOString(), created_at: dayjs().subtract(1, 'hour').toISOString(), urgency: 'Medium', room: '102', description: 'Clicking sound constantly.' },
-        { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Assigned', assigned_to: 'Tech 02 (Electrical)', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'hour').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: null },
+        { id: 'TKT-1001', category: 'AC', summary: 'AC not cooling in Room 201', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(2, 'hour').toISOString(), created_at: dayjs().subtract(3, 'hour').toISOString(), urgency: 'High', room: '201', description: 'The AC blows warm air.', hostel_building: 'B26' },
+        { id: 'TKT-1002', category: 'Water Dispenser', summary: 'Water leaking on 3rd floor', status: 'Assigned', assigned_to: 'Tech 04 (Water Dispenser)', sla_deadline: dayjs().subtract(1, 'hour').toISOString(), created_at: dayjs().subtract(5, 'hour').toISOString(), urgency: 'High', room: '3rd Floor Lobby', description: 'Massive puddle forming.', resolved_time_hours: null, hostel_building: 'B27' },
+        { id: 'TKT-1003', category: 'Cleaning', summary: 'Room 405 needs deep clean', status: 'Closed', assigned_to: 'Tech 06 (Cleaning)', sla_deadline: dayjs().subtract(1, 'day').toISOString(), created_at: dayjs().subtract(2, 'day').toISOString(), urgency: 'Low', room: '405', description: 'Dust everywhere post holiday.', resolved_time_hours: 4, hostel_building: 'LH' },
+        { id: 'TKT-1004', category: 'AC', summary: 'Strange noise from vent', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(5, 'hour').toISOString(), created_at: dayjs().subtract(1, 'hour').toISOString(), urgency: 'Medium', room: '102', description: 'Clicking sound constantly.', hostel_building: 'B29' },
+        { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Closed', assigned_to: 'Tech 02 (Electrical)', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'day').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: 2, hostel_building: 'B30' },
     ];
 };
 
@@ -43,31 +44,44 @@ const initialTickets = generateDummyTickets();
 const getCategory = (rawCat) => {
     if (!rawCat) return 'Other';
     const lower = rawCat.toLowerCase();
-    switch (lower) {
-        case 'ac': return 'AC';
-        case 'cleaning': return 'Cleaning';
-        case 'water_disp': return 'Water Cooler';
-        case 'water cooler': return 'Water Cooler';
-        case 'wifi': return 'Wifi';
-        case 'wash_mach': return 'Washing Machine';
-        case 'washing machine': return 'Washing Machine';
-        case 'geyser': return 'Electrical';
-        case 'electrical': return 'Electrical';
-        default: return rawCat;
-    }
+
+    // Strict mapping 
+    if (lower.includes('cleaning')) return 'Cleaning';
+    if (lower.includes('wash_mach') || lower.includes('washing')) return 'Washing Machine';
+    if (lower.includes('vending')) return 'Vending Machine';
+    if (lower.includes('geyser')) return 'Geyser';
+    if (lower.includes('oven')) return 'Oven';
+    if (lower.includes('fridge')) return 'Fridge';
+    if (lower.includes('water_disp') || lower.includes('dispenser') || lower.includes('cooler')) return 'Water Dispenser';
+    if (lower.includes('washroom') || lower.includes('plumbing') || lower.includes('leak')) return 'Washroom Issues';
+    if (lower.includes('wifi') || lower.includes('internet') || lower.includes('network')) return 'WiFi';
+    if (lower.includes('ac') || lower.includes('air_cond')) return 'AC';
+    if (lower.includes('electrical') || lower.includes('light') || lower.includes('fan')) return 'Electrical';
+    if (lower.includes('furniture') || lower.includes('bed') || lower.includes('chair') || lower.includes('table')) return 'Furniture';
+    if (lower.includes('elevator') || lower.includes('lift')) return 'Electrical'; // Fallback
+
+    return 'Other';
 };
 
 const getAssignedTech = (mappedCategory) => {
     switch (mappedCategory) {
-        case 'Water Cooler': return 'Tech 04 (Water Cooler)';
-        case 'Washing Machine': return 'Tech 05 (Washing Machine)';
-        case 'Cleaning': return 'Tech 06 (Cleaning)';
-        case 'Wifi': return 'Tech 07 (Wifi)';
         case 'AC': return 'Tech 01 (AC)';
         case 'Electrical': return 'Tech 02 (Electrical)';
+        case 'Washroom Issues': return 'Tech 03 (Washroom Issues)';
+        case 'Water Dispenser': return 'Tech 04 (Water Dispenser)';
+        case 'Washing Machine': return 'Tech 05 (Washing Machine)';
+        case 'Cleaning': return 'Tech 06 (Cleaning)';
+        case 'WiFi': return 'Tech 07 (WiFi)';
+        case 'Vending Machine': return 'Tech 08 (Vending Machine)';
+        case 'Geyser': return 'Tech 09 (Geyser)';
+        case 'Oven': return 'Tech 10 (Oven)';
+        case 'Fridge': return 'Tech 11 (Fridge)';
+        case 'Furniture': return 'Tech 12 (Furniture)';
         default: return `Tech 00 (${mappedCategory})`;
     }
 };
+
+const isValidBlock = (block) => ['B26', 'B27', 'B29', 'B30', 'LH'].includes(block);
 
 const mapApiTicket = (data) => {
     const mappedCategory = getCategory(data.category);
@@ -83,8 +97,11 @@ const mapApiTicket = (data) => {
         created_at: data.created_at || new Date().toISOString(),
         urgency: data.priority === 'high' ? 'High' : (data.priority === 'low' ? 'Low' : 'Medium'),
         room: data.room,
+        hostel_building: isValidBlock(data.hostel_building) ? data.hostel_building : '',
         description: data.description,
-        resolved_time_hours: data.status === 'Closed' ? 2 : null
+        resolved_time_hours: data.status === 'Closed' ? 2 : null,
+        admin_notes: data.admin_comment || '',
+        phone: data.phone ? String(data.phone).substring(2) : ''
     };
 };
 
@@ -96,9 +113,14 @@ const AdminDashboard = () => {
     // Advanced Multi-Filters State
     const [activeKpiFilter, setActiveKpiFilter] = useState(null); // 'Total', 'Open', 'Assigned', 'Closed'
     const [filterCategory, setFilterCategory] = useState([]);
+    const [filterBlock, setFilterBlock] = useState([]);
     const [filterStatus, setFilterStatus] = useState([]);
     const [filterTechnician, setFilterTechnician] = useState([]);
     const [searchText, setSearchText] = useState('');
+    const [dateFilter, setDateFilter] = useState('1M'); // '1W', '1M', 'CUSTOM'
+    const [customDateRange, setCustomDateRange] = useState([null, null]);
+    const [chartView, setChartView] = useState('Category'); // 'Category' or 'Block'
+    const [filterBreached, setFilterBreached] = useState(false);
 
     // Drawer state
     const [drawerVisible, setDrawerVisible] = useState(false);
@@ -112,7 +134,7 @@ const AdminDashboard = () => {
                 if (response.ok) {
                     const data = await response.json();
                     const liveTickets = data.map(mapApiTicket);
-                    setTickets([...liveTickets, ...initialTickets]);
+                    setTickets(liveTickets);
                 }
             } catch (error) {
                 console.error("Failed to fetch live tickets", error);
@@ -127,25 +149,45 @@ const AdminDashboard = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // --- KPI COMPUTATION ---
+    // --- CHART COMPUTATIONS ---
+    const filteredByDateAndBlockTickets = tickets.filter(t => {
+        // Date Logic
+        const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
+        if (dateFilter === '1W') return diffDays <= 7;
+        if (dateFilter === '1M') return diffDays <= 30;
+        if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
+            return dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
+                dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+        }
+        return true;
+    });
+
     const kpiData = {
-        total: tickets.length,
-        open: tickets.filter(t => t.status === 'Open').length,
-        assigned: tickets.filter(t => t.status === 'Assigned').length,
-        closed: tickets.filter(t => t.status === 'Closed').length,
+        total: filteredByDateAndBlockTickets.length,
+        open: filteredByDateAndBlockTickets.filter(t => t.status === 'Open').length,
+        assigned: filteredByDateAndBlockTickets.filter(t => t.status === 'Assigned').length,
+        closed: filteredByDateAndBlockTickets.filter(t => t.status === 'Closed').length,
     };
 
     const formatter = (value) => <CountUp end={value} duration={1.5} className="kpi-number" />;
 
-    // --- CHART COMPUTATIONS ---
-    // 1. Most Common Issues Data
+    // 1. Most frequent issues Data
     const getCommonIssues = () => {
         const counts = {};
-        tickets.forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
-        return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).sort((a, b) => b.count - a.count);
+        if (chartView === 'Category') {
+            filteredByDateAndBlockTickets.forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
+        } else {
+            filteredByDateAndBlockTickets.forEach(t => {
+                const block = t.hostel_building || (isValidBlock(t.room) ? t.room : ''); // fallback just in case
+                if (isValidBlock(block)) {
+                    counts[block] = (counts[block] || 0) + 1;
+                }
+            });
+        }
+        return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).sort((a, b) => b.count - a.count).slice(0, 5);
     };
     const commonIssuesData = getCommonIssues();
-    const CATEGORY_COLORS = { 'AC': '#4F46E5', 'Water Cooler': '#0EA5E9', 'Cleaning': '#10B981', 'Electrical': '#F59E0B' };
+    const CATEGORY_COLORS = { 'AC': '#4F46E5', 'Water Cooler': '#0EA5E9', 'Cleaning': '#10B981', 'Electrical': '#F59E0B', 'Washing Machine': '#8B5CF6', 'Washroom Issues': '#EC4899', 'WiFi': '#14B8A6', 'Furniture': '#F97316', 'Fridge': '#3B82F6', 'Oven': '#EF4444', 'Vending Machine': '#FBBF24', 'Geyser': '#06B6D4', 'Water Dispenser': '#84CC16' };
 
     // --- FILTERING LOGIC ---
     const handleKpiClick = (kpi) => {
@@ -160,31 +202,57 @@ const AdminDashboard = () => {
     };
 
     const handleChartClick = (data) => {
-        if (!data || !data.activePayload) return;
-        const cat = data.activePayload[0].payload.name;
-        if (filterCategory.includes(cat)) {
-            setFilterCategory(filterCategory.filter(c => c !== cat));
+        if (!data || !data.activePayload) {
+            if (chartView === 'Category') setFilterCategory([]);
+            else setFilterBlock([]);
+            return;
+        }
+        const val = data.activePayload[0].payload.name;
+        if (chartView === 'Category') {
+            setFilterCategory([val]);
+            setFilterBlock([]); // mutually exclusive quick filtering from chart
         } else {
-            setFilterCategory([...filterCategory, cat]);
+            setFilterBlock([val]);
+            setFilterCategory([]);
         }
     };
 
     const filteredTickets = tickets.filter(t => {
+        const isBreached = checkSlaBreach(t.sla_deadline, t.status);
+
+        // If filterBreached is active, only show breached tickets, regardless of date filter
+        if (filterBreached) {
+            return isBreached;
+        }
+
+        // If filterBreached is NOT active, apply date filter
+        let matchDate = true;
+        const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
+        if (dateFilter === '1W') matchDate = diffDays <= 7;
+        if (dateFilter === '1M') matchDate = diffDays <= 30;
+        if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
+            matchDate = dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
+                dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+        }
+
         const matchCat = filterCategory.length > 0 ? filterCategory.includes(t.category) : true;
+        const matchBlock = filterBlock.length > 0 ? filterBlock.includes(t.hostel_building) : true;
         const matchStatus = filterStatus.length > 0 ? filterStatus.includes(t.status) : true;
         const matchTech = filterTechnician.length > 0 ? filterTechnician.includes(t.assigned_to) : true;
         const matchSearch = searchText ? t.id.toLowerCase().includes(searchText.toLowerCase()) || t.summary.toLowerCase().includes(searchText.toLowerCase()) : true;
         const matchKpi = activeKpiFilter && activeKpiFilter !== 'Total' ? t.status === activeKpiFilter : true;
 
-        return matchCat && matchStatus && matchTech && matchSearch && matchKpi;
+        return matchDate && matchCat && matchBlock && matchStatus && matchTech && matchSearch && matchKpi;
     });
 
     const clearAllFilters = () => {
         setFilterCategory([]);
+        setFilterBlock([]);
         setFilterStatus([]);
         setFilterTechnician([]);
         setSearchText('');
         setActiveKpiFilter(null);
+        setFilterBreached(false);
     };
 
     // --- DRAWER ACTIONS ---
@@ -229,7 +297,9 @@ const AdminDashboard = () => {
                     body: JSON.stringify({
                         ticket_id: editingTicket.raw_id,
                         status: values.status,
-                        assigned_to: values.assigned_to
+                        assigned_to: values.assigned_to,
+                        category: values.category,
+                        admin_comment: values.admin_notes || ''
                     })
                 });
             } catch (error) {
@@ -251,10 +321,24 @@ const AdminDashboard = () => {
         }
     };
 
-    const checkSlaBreach = (deadline, status) => {
+    function checkSlaBreach(deadline, status) {
         if (status === 'Closed' || !deadline) return false;
         return dayjs(deadline).isBefore(currentTime);
-    };
+    }
+
+    // Pre-calculate exact category frequencies from ALL valid tickets
+    const categoryFrequencies = {};
+    const ALL_CATEGORIES = [
+        "Washing Machine", "Vending Machine", "Geyser", "Oven", "Fridge",
+        "Water Dispenser", "Washroom Issues", "WiFi", "Electrical", "AC", "Furniture", "Cleaning"
+    ];
+
+    ALL_CATEGORIES.forEach(cat => categoryFrequencies[cat] = 0);
+    tickets.forEach(t => {
+        if (categoryFrequencies[t.category] !== undefined) {
+            categoryFrequencies[t.category]++;
+        }
+    });
 
     // --- TABLE COLUMNS ---
     const columns = [
@@ -262,21 +346,23 @@ const AdminDashboard = () => {
             title: 'Ticket ID',
             dataIndex: 'id',
             key: 'id',
+            width: 120,
             render: (text) => <span className="font-semibold text-slate-700">{text}</span>,
         },
         {
             title: 'Category',
             dataIndex: 'category',
             key: 'category',
-            filters: [
-                { text: 'AC', value: 'AC' },
-                { text: 'Water Cooler', value: 'Water Cooler' },
-                { text: 'Cleaning', value: 'Cleaning' },
-                { text: 'Electrical', value: 'Electrical' },
-            ],
+            width: 160,
+            filters: ALL_CATEGORIES.map(cat => ({
+                text: `${cat} (${categoryFrequencies[cat]})`,
+                value: cat
+            })),
             onFilter: (value, record) => record.category === value,
             render: (text) => (
-                <span className="font-medium text-slate-800">{text}</span>
+                <Tag color={CATEGORY_COLORS[text] || 'default'} className="rounded-full px-3 font-medium border-0 shadow-sm whitespace-nowrap">
+                    {text}
+                </Tag>
             ),
         },
         {
@@ -284,6 +370,14 @@ const AdminDashboard = () => {
             dataIndex: 'summary',
             key: 'summary',
             width: '25%',
+            render: (text, record) => (
+                <div className="flex flex-col">
+                    <span className="font-medium text-slate-800 break-words line-clamp-2" title={text}>{text}</span>
+                    <a className="text-indigo-600 text-xs mt-1 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); openDrawer(record); }}>
+                        Read more
+                    </a>
+                </div>
+            )
         },
         {
             title: 'Status',
@@ -306,9 +400,12 @@ const AdminDashboard = () => {
             dataIndex: 'assigned_to',
             key: 'assigned_to',
             filters: [
-                { text: 'Tech 01', value: 'tech_01' },
-                { text: 'Tech 02', value: 'tech_02' },
-                { text: 'Tech 03', value: 'tech_03' },
+                { text: 'Tech 01', value: 'Tech 01 (AC)' },
+                { text: 'Tech 02', value: 'Tech 02 (Electrical)' },
+                { text: 'Tech 04', value: 'Tech 04 (Water Dispenser)' },
+                { text: 'Tech 05', value: 'Tech 05 (Washing Machine)' },
+                { text: 'Tech 06', value: 'Tech 06 (Cleaning)' },
+                { text: 'Tech 07', value: 'Tech 07 (WiFi)' },
             ],
             onFilter: (value, record) => record.assigned_to === value,
             render: (text) => text ? <Tag className="border-slate-200 text-slate-600 bg-slate-50">{text}</Tag> : <span className="text-gray-300 italic">Unassigned</span>,
@@ -392,10 +489,12 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            <Row gutter={[24, 24]} className="mb-6 h-full lg:h-[280px]">
-                <Col xs={24} lg={10} xl={10} className="h-full">
-                    <Row gutter={[16, 16]} className="h-full">
-                        <Col xs={24} sm={12} className="h-1/2 pb-2">
+
+
+            <Row gutter={[24, 24]} className="mb-6 lg:h-[280px] mt-6">
+                <Col xs={24} lg={10} xl={10}>
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} sm={12} className="h-[132px]">
                             <div
                                 onClick={() => handleKpiClick('Total')}
                                 className={`h-full cursor-pointer rounded-2xl p-6 border transition-all duration-300 shadow-sm flex flex-col justify-center
@@ -410,7 +509,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </Col>
-                        <Col xs={24} sm={12} className="h-1/2 pb-2">
+                        <Col xs={24} sm={12} className="h-[132px]">
                             <div
                                 onClick={() => handleKpiClick('Open')}
                                 className={`h-full cursor-pointer rounded-2xl p-6 border transition-all duration-300 shadow-sm flex flex-col justify-center
@@ -425,7 +524,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </Col>
-                        <Col xs={24} sm={12} className="h-1/2 pt-2">
+                        <Col xs={24} sm={12} className="h-[132px]">
                             <div
                                 onClick={() => handleKpiClick('Assigned')}
                                 className={`h-full cursor-pointer rounded-2xl p-6 border transition-all duration-300 shadow-sm flex flex-col justify-center
@@ -440,7 +539,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                         </Col>
-                        <Col xs={24} sm={12} className="h-1/2 pt-2">
+                        <Col xs={24} sm={12} className="h-[132px]">
                             <div
                                 onClick={() => handleKpiClick('Closed')}
                                 className={`h-full cursor-pointer rounded-2xl p-6 border transition-all duration-300 shadow-sm flex flex-col justify-center
@@ -459,9 +558,17 @@ const AdminDashboard = () => {
                 </Col>
 
                 <Col xs={24} lg={14} xl={14} className="h-full">
-                    {/* Most Common Issues Chart (Beside KPIs) */}
+                    {/* Most frequent issues Chart (Beside KPIs) */}
                     <Card
-                        title={<span className="flex items-center gap-2 section-header font-semibold text-slate-800"><DashboardOutlined className="text-indigo-500" /> Most Common Issues Pipeline</span>}
+                        title={
+                            <div className="flex justify-between items-center w-full">
+                                <span className="flex items-center gap-2 section-header font-semibold text-slate-800"><DashboardOutlined className="text-indigo-500" /> Active Issues Tracker</span>
+                                <Radio.Group value={chartView} onChange={(e) => { setChartView(e.target.value); setFilterCategory([]); setFilterBlock([]); }} size="small" buttonStyle="solid" className="flex gap-2">
+                                    <Radio.Button value="Category" className="rounded border">Category</Radio.Button>
+                                    <Radio.Button value="Block" className="rounded border">Block</Radio.Button>
+                                </Radio.Group>
+                            </div>
+                        }
                         className="shadow-sm border-slate-200 h-full"
                         bodyStyle={{ height: 'calc(100% - 58px)', display: 'flex', flexDirection: 'column', padding: '12px 24px' }}
                     >
@@ -477,47 +584,103 @@ const AdminDashboard = () => {
                                         itemStyle={{ fontWeight: 600, color: '#1E293B' }}
                                     />
                                     <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40} className="cursor-pointer">
-                                        {commonIssuesData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#94A3B8'}
-                                                style={{ opacity: filterCategory.includes(entry.name) || filterCategory.length === 0 ? 1 : 0.3 }}
-                                            />
-                                        ))}
+                                        {commonIssuesData.map((entry, index) => {
+                                            const isActive = chartView === 'Block' ? (filterBlock.length === 0 || filterBlock.includes(entry.name)) : (filterCategory.length === 0 || filterCategory.includes(entry.name));
+                                            return (
+                                                <Cell key={`cell-${index}`} fill={chartView === 'Block' ? '#F59E0B' : (CATEGORY_COLORS[entry.name] || '#94A3B8')}
+                                                    style={{ opacity: isActive ? 1 : 0.3 }}
+                                                />
+                                            );
+                                        })}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click a vertical bar segment above to actively filter the ticket queue below.</div>
+                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click a bar to filter the ticket queue. Click chart background to reset.</div>
                     </Card>
                 </Col>
             </Row>
 
             {/* Persistent Quick Filters Panel */}
             <Card bodyStyle={{ padding: '16px 24px' }} className="border-slate-200 sticky top-0 z-20 shadow-md backdrop-blur bg-white/90">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                        <span className="font-semibold text-slate-700 mr-2 flex items-center gap-2"><FilterOutlined /> Quick Filters:</span>
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto flex-1">
+                        <Button
+                            type={filterBreached ? 'primary' : 'default'}
+                            danger={filterBreached}
+                            onClick={() => setFilterBreached(!filterBreached)}
+                            className={filterBreached ? 'bg-red-500 border-red-500 shadow-sm font-medium' : 'font-medium text-slate-600 border-slate-300'}
+                            icon={<WarningOutlined />}
+                        >
+                            Breached
+                        </Button>
 
                         <Select
                             mode="multiple"
                             placeholder="Category"
                             value={filterCategory}
                             onChange={setFilterCategory}
-                            className="w-40"
+                            className="min-w-[140px] flex-1 max-w-[200px]"
                             maxTagCount="responsive"
                             bordered={true}
                         >
-                            <Option value="AC">AC</Option>
-                            <Option value="Water Cooler">Water Cooler</Option>
-                            <Option value="Cleaning">Cleaning</Option>
+                            <Option value="Washing Machine">Washing Machine</Option>
+                            <Option value="Vending Machine">Vending Machine</Option>
+                            <Option value="Geyser">Geyser</Option>
+                            <Option value="Oven">Oven</Option>
+                            <Option value="Fridge">Fridge</Option>
+                            <Option value="Water Dispenser">Water Dispenser</Option>
+                            <Option value="Washroom Issues">Washroom Issues</Option>
+                            <Option value="WiFi">WiFi</Option>
                             <Option value="Electrical">Electrical</Option>
+                            <Option value="AC">AC</Option>
+                            <Option value="Furniture">Furniture</Option>
                         </Select>
+
+                        <Select
+                            mode="multiple"
+                            placeholder="Block"
+                            value={filterBlock}
+                            onChange={setFilterBlock}
+                            className="min-w-[100px] flex-1 max-w-[150px]"
+                            maxTagCount="responsive"
+                            bordered={true}
+                        >
+                            <Option value="B26">B26</Option>
+                            <Option value="B27">B27</Option>
+                            <Option value="B29">B29</Option>
+                            <Option value="B30">B30</Option>
+                            <Option value="LH">LH</Option>
+                        </Select>
+
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <Select
+                                value={dateFilter}
+                                onChange={setDateFilter}
+                                className="w-32"
+                                bordered={true}
+                                disabled={filterBreached} // Disable date filter if breached is active
+                            >
+                                <Option value="1W">Last 1 Week</Option>
+                                <Option value="1M">Last 1 Month</Option>
+                                <Option value="CUSTOM">Custom</Option>
+                            </Select>
+
+                            {dateFilter === 'CUSTOM' && !filterBreached && (
+                                <RangePicker
+                                    onChange={(dates) => setCustomDateRange(dates || [null, null])}
+                                    value={customDateRange}
+                                    className="rounded-lg w-[240px]"
+                                />
+                            )}
+                        </div>
 
                         <Select
                             mode="multiple"
                             placeholder="Status"
                             value={filterStatus}
                             onChange={setFilterStatus}
-                            className="w-40"
+                            className="min-w-[120px] flex-1 max-w-[160px]"
                             maxTagCount="responsive"
                         >
                             <Option value="Open">Open</Option>
@@ -530,19 +693,24 @@ const AdminDashboard = () => {
                             placeholder="Technician"
                             value={filterTechnician}
                             onChange={setFilterTechnician}
-                            className="w-40"
+                            className="min-w-[140px] flex-1 max-w-[200px]"
                             maxTagCount="responsive"
                         >
                             <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
                             <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
-                            <Option value="Tech 03 (Other)">Tech 03 (Other)</Option>
-                            <Option value="Tech 04 (Water Cooler)">Tech 04 (Water Cooler)</Option>
+                            <Option value="Tech 03 (Washroom Issues)">Tech 03 (Washroom Issues)</Option>
+                            <Option value="Tech 04 (Water Dispenser)">Tech 04 (Water Dispenser)</Option>
                             <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
                             <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
-                            <Option value="Tech 07 (Wifi)">Tech 07 (Wifi)</Option>
+                            <Option value="Tech 07 (WiFi)">Tech 07 (WiFi)</Option>
+                            <Option value="Tech 08 (Vending Machine)">Tech 08 (Vending Machine)</Option>
+                            <Option value="Tech 09 (Geyser)">Tech 09 (Geyser)</Option>
+                            <Option value="Tech 10 (Oven)">Tech 10 (Oven)</Option>
+                            <Option value="Tech 11 (Fridge)">Tech 11 (Fridge)</Option>
+                            <Option value="Tech 12 (Furniture)">Tech 12 (Furniture)</Option>
                         </Select>
 
-                        {(filterCategory.length > 0 || filterStatus.length > 0 || filterTechnician.length > 0 || searchText || activeKpiFilter) && (
+                        {(filterCategory.length > 0 || filterStatus.length > 0 || filterTechnician.length > 0 || searchText || activeKpiFilter || filterBreached) && (
                             <Button type="link" onClick={clearAllFilters} className="text-slate-500 hover:text-indigo-600 font-medium">
                                 Clear Filters
                             </Button>
@@ -560,10 +728,10 @@ const AdminDashboard = () => {
                         />
                     </div>
                 </div>
-            </Card>
+            </Card >
 
             {/* Main Tickets Table */}
-            <Card className="shadow-sm border-slate-200 mt-6">
+            < Card id="tickets-table" className="shadow-sm border-slate-200 mt-6" >
                 <Table
                     columns={columns}
                     dataSource={filteredTickets}
@@ -583,14 +751,14 @@ const AdminDashboard = () => {
                     })}
                     className="table-reflow-enter"
                 />
-            </Card>
+            </Card >
 
             {/* Ticket Details Drawer */}
-            <Drawer
+            < Drawer
                 title={
-                    <div className="flex items-center gap-2 text-xl font-semibold">
+                    < div className="flex items-center gap-2 text-xl font-semibold" >
                         Manage Ticket: <span className="text-indigo-600 font-mono bg-indigo-50 px-2 py-0.5 rounded-md">{editingTicket?.id}</span>
-                    </div>
+                    </div >
                 }
                 placement="right"
                 width={480}
@@ -599,31 +767,44 @@ const AdminDashboard = () => {
                 destroyOnClose
                 className="custom-drawer"
                 extra={
-                    <Space>
+                    < Space >
                         <Button onClick={onCloseDrawer} className="rounded-lg">Cancel</Button>
                         <Button type="primary" onClick={() => form.submit()} className="bg-indigo-600 text-white rounded-lg shadow-md font-medium">
                             Save Changes
                         </Button>
-                    </Space>
+                    </Space >
                 }
             >
                 {editingTicket && (
                     <div className="mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">{editingTicket.summary}</h3>
-                        <p className="text-slate-600 mb-6 leading-relaxed">{editingTicket.description}</p>
-
-                        <div className="grid grid-cols-2 gap-y-4 text-sm bg-white p-4 rounded-xl border border-slate-100">
+                        <div className="grid grid-cols-2 gap-y-5 text-sm bg-white p-5 rounded-xl border border-slate-100">
+                            <div className="flex flex-col gap-1 col-span-2 pb-4 border-b border-slate-100">
+                                <span className="text-slate-800 text-sm uppercase tracking-wider font-bold">Issue</span>
+                                <span className="font-normal text-slate-700 whitespace-pre-line text-sm leading-relaxed mt-1">{editingTicket.description || editingTicket.summary}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Hostel Building</span>
+                                <span className="font-semibold text-slate-700">{editingTicket.hostel_building || 'Hostel 1'}</span>
+                            </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Room</span>
-                                <span className="font-semibold text-slate-700">{editingTicket.room}</span>
+                                <span className="font-semibold text-slate-700">{editingTicket.room || 'N/A'}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Created On</span>
+                                <span className="font-semibold text-slate-700">{dayjs(editingTicket.created_at).format('DD MMM YYYY, hh:mm A')}</span>
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Urgency</span>
                                 <span className={`font-bold ${editingTicket.urgency === 'High' ? 'text-red-500' : 'text-amber-500'}`}>{editingTicket.urgency}</span>
                             </div>
                             <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Elapsed Time</span>
-                                <span className="font-semibold text-slate-700">{dayjs(editingTicket.created_at).fromNow(true)} ago</span>
+                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Contact Number</span>
+                                {editingTicket.phone ? (
+                                    <span className="font-semibold text-slate-700 font-mono">{editingTicket.phone}</span>
+                                ) : (
+                                    <span className="font-semibold text-slate-400 italic">Not provided</span>
+                                )}
                             </div>
                         </div>
 
@@ -650,12 +831,17 @@ const AdminDashboard = () => {
 
                     <Form.Item label={<span className="font-medium text-slate-700">Category</span>} name="category" rules={[{ required: true }]}>
                         <Select>
-                            <Option value="AC">AC</Option>
-                            <Option value="Water Cooler">Water Cooler</Option>
-                            <Option value="Cleaning">Cleaning</Option>
-                            <Option value="Electrical">Electrical</Option>
                             <Option value="Washing Machine">Washing Machine</Option>
-                            <Option value="Wifi">Wifi</Option>
+                            <Option value="Vending Machine">Vending Machine</Option>
+                            <Option value="Geyser">Geyser</Option>
+                            <Option value="Oven">Oven</Option>
+                            <Option value="Fridge">Fridge</Option>
+                            <Option value="Water Dispenser">Water Dispenser</Option>
+                            <Option value="Washroom Issues">Washroom Issues</Option>
+                            <Option value="WiFi">WiFi</Option>
+                            <Option value="Electrical">Electrical</Option>
+                            <Option value="AC">AC</Option>
+                            <Option value="Furniture">Furniture</Option>
                         </Select>
                     </Form.Item>
 
@@ -663,24 +849,29 @@ const AdminDashboard = () => {
                         <Select allowClear placeholder="Select assigned technician">
                             <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
                             <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
-                            <Option value="Tech 03 (Other)">Tech 03 (Other)</Option>
-                            <Option value="Tech 04 (Water Cooler)">Tech 04 (Water Cooler)</Option>
+                            <Option value="Tech 03 (Washroom Issues)">Tech 03 (Washroom Issues)</Option>
+                            <Option value="Tech 04 (Water Dispenser)">Tech 04 (Water Dispenser)</Option>
                             <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
                             <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
-                            <Option value="Tech 07 (Wifi)">Tech 07 (Wifi)</Option>
+                            <Option value="Tech 07 (WiFi)">Tech 07 (WiFi)</Option>
+                            <Option value="Tech 08 (Vending Machine)">Tech 08 (Vending Machine)</Option>
+                            <Option value="Tech 09 (Geyser)">Tech 09 (Geyser)</Option>
+                            <Option value="Tech 10 (Oven)">Tech 10 (Oven)</Option>
+                            <Option value="Tech 11 (Fridge)">Tech 11 (Fridge)</Option>
+                            <Option value="Tech 12 (Furniture)">Tech 12 (Furniture)</Option>
                         </Select>
                     </Form.Item>
 
                     <Form.Item label={<span className="font-medium text-slate-700">SLA Deadline (Target Resolution Time)</span>} name="sla_deadline">
-                        <DatePicker showTime format="YYYY-MM-DD HH:mm" className="w-full rounded-lg" />
+                        <DatePicker format="YYYY-MM-DD" className="w-full rounded-lg" />
                     </Form.Item>
 
                     <Form.Item label={<span className="font-medium text-slate-700">Admin Notes</span>} name="admin_notes" className="mt-6">
                         <TextArea rows={4} placeholder="Enter internal supervisor notes here..." className="rounded-xl border-slate-200" />
                     </Form.Item>
                 </Form>
-            </Drawer>
-        </div>
+            </Drawer >
+        </div >
     );
 };
 

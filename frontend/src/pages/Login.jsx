@@ -133,16 +133,6 @@ const Login = () => {
                                     <div className="text-sm font-medium text-slate-700">admin@spjimr.org <span className="text-slate-300 mx-1">/</span> admin123</div>
                                 </div>
                             </div>
-
-                            <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center gap-4 hover:bg-slate-50 hover:border-amber-100 transition-colors cursor-default group">
-                                <div className="bg-amber-100/50 p-2.5 rounded-lg text-amber-600 group-hover:bg-amber-100 transition-colors">
-                                    <ToolOutlined className="text-lg" />
-                                </div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Technician Role</div>
-                                    <div className="text-sm font-medium text-slate-700">tech@spjimr.org <span className="text-slate-300 mx-1">/</span> tech123</div>
-                                </div>
-                            </div>
                         </div>
 
                     </Card>

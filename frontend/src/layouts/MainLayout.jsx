@@ -85,7 +85,6 @@ const MainLayout = ({ role }) => {
     const moduleOptions = [
         { value: 'hostel', label: <span className="flex items-center gap-2"><BankOutlined /> Hostel (Active)</span> },
         { value: 'mess', label: <span className="flex items-center gap-2"><CoffeeOutlined /> Mess</span> },
-        { value: 'recreation', label: <span className="flex items-center gap-2"><DribbbleOutlined /> Rec Centre</span> },
         { value: 'academic', label: <span className="flex items-center gap-2"><BookOutlined /> Academic Block</span> },
     ];
 
@@ -172,8 +171,7 @@ const MainLayout = ({ role }) => {
                                             <Text type="secondary" className="block text-center whitespace-normal leading-relaxed">
                                                 The <strong>
                                                     {currentModule === 'mess' ? 'Mess' :
-                                                        currentModule === 'recreation' ? 'Rec Centre' :
-                                                            currentModule === 'academic' ? 'Academic Block' : 'Hostel'}
+                                                        currentModule === 'academic' ? 'Academic Block' : 'Hostel'}
                                                 </strong> module is currently under development.
                                             </Text>
                                         </div>
