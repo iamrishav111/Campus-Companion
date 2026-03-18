@@ -239,7 +239,7 @@ const AdminDashboard = () => {
         const matchBlock = filterBlock.length > 0 ? filterBlock.includes(t.hostel_building) : true;
         const matchStatus = filterStatus.length > 0 ? filterStatus.includes(t.status) : true;
         const matchTech = filterTechnician.length > 0 ? filterTechnician.includes(t.assigned_to) : true;
-        const matchSearch = searchText ? t.id.toLowerCase().includes(searchText.toLowerCase()) || t.summary.toLowerCase().includes(searchText.toLowerCase()) : true;
+        const matchSearch = searchText ? t.id.toLowerCase().includes(searchText.toLowerCase()) || t.summary.toLowerCase().includes(searchText.toLowerCase()) || (t.room && t.room.toLowerCase().includes(searchText.toLowerCase())) : true;
         const matchKpi = activeKpiFilter && activeKpiFilter !== 'Total' ? t.status === activeKpiFilter : true;
 
         return matchDate && matchCat && matchBlock && matchStatus && matchTech && matchSearch && matchKpi;
@@ -411,19 +411,18 @@ const AdminDashboard = () => {
             render: (text) => text ? <Tag className="border-slate-200 text-slate-600 bg-slate-50">{text}</Tag> : <span className="text-gray-300 italic">Unassigned</span>,
         },
         {
-            title: 'Ticket Aging',
-            key: 'aging',
-            sorter: (a, b) => dayjs(a.created_at).valueOf() - dayjs(b.created_at).valueOf(),
-            render: (_, record) => {
-                // Render human readable time clean format (e.g., Opened 2 hours ago -> we strip "ago" using native string interpolation or fromNow logic cleanly)
-                const timeAgo = dayjs(record.created_at).fromNow(true); // true removes the "ago" suffix
-                return (
-                    <div className="flex items-center gap-2 text-slate-500 font-medium whitespace-nowrap">
-                        <ClockCircleOutlined className="text-slate-400" />
-                        <span>Created {timeAgo} ago</span>
-                    </div>
-                );
-            }
+            title: 'Block Number',
+            dataIndex: 'hostel_building',
+            key: 'hostel_building',
+            sorter: (a, b) => (a.hostel_building || '').localeCompare(b.hostel_building || ''),
+            render: (text) => <span className="font-semibold text-slate-600">{text || 'N/A'}</span>,
+        },
+        {
+            title: 'Room Number',
+            dataIndex: 'room',
+            key: 'room',
+            sorter: (a, b) => (a.room || '').localeCompare(b.room || ''),
+            render: (text) => <span className="font-medium text-slate-700">{text || 'N/A'}</span>,
         },
         {
             title: 'SLA Status',
@@ -443,21 +442,6 @@ const AdminDashboard = () => {
                     </span>
                 );
             }
-        },
-        {
-            title: 'Actions',
-            key: 'action',
-            render: (_, record) => (
-                <Button
-                    type="primary"
-                    ghost
-                    size="small"
-                    onClick={() => openDrawer(record)}
-                    className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-medium px-4"
-                >
-                    Manage
-                </Button>
-            ),
         },
     ];
 
@@ -719,7 +703,7 @@ const AdminDashboard = () => {
 
                     <div className="w-full lg:w-auto">
                         <Input
-                            placeholder="Search ID or Summary..."
+                            placeholder="Search ID, Summary, Room..."
                             prefix={<SearchOutlined className="text-slate-300" />}
                             value={searchText}
                             onChange={e => setSearchText(e.target.value)}

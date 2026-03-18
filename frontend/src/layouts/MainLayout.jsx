@@ -11,7 +11,9 @@ import {
     DribbbleOutlined,
     BookOutlined,
     LineChartOutlined,
-    HistoryOutlined
+    HistoryOutlined,
+    AppstoreOutlined,
+    MenuOutlined
 } from '@ant-design/icons';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 
@@ -84,14 +86,13 @@ const MainLayout = ({ role }) => {
 
     const moduleOptions = [
         { value: 'hostel', label: <span className="flex items-center gap-2"><BankOutlined /> Hostel (Active)</span> },
-        { value: 'mess', label: <span className="flex items-center gap-2"><CoffeeOutlined /> Mess</span> },
-        { value: 'academic', label: <span className="flex items-center gap-2"><BookOutlined /> Academic Block</span> },
+        { value: 'others', label: <span className="flex items-center gap-2"><AppstoreOutlined /> Others</span> },
     ];
 
     return (
         <Layout className="min-h-screen">
             <Sider
-                width={250}
+                width={220}
                 theme="light"
                 className="shadow-sm border-r border-slate-100"
                 breakpoint="lg"
@@ -170,8 +171,7 @@ const MainLayout = ({ role }) => {
                                             <Title level={4} className="text-slate-700 m-0">🚧 Feature coming soon</Title>
                                             <Text type="secondary" className="block text-center whitespace-normal leading-relaxed">
                                                 The <strong>
-                                                    {currentModule === 'mess' ? 'Mess' :
-                                                        currentModule === 'academic' ? 'Academic Block' : 'Hostel'}
+                                                    {currentModule === 'others' ? 'Others' : 'Hostel'}
                                                 </strong> module is currently under development.
                                             </Text>
                                         </div>
