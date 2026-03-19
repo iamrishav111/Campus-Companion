@@ -12,6 +12,7 @@ import {
     FilterOutlined,
     ClockCircleOutlined,
     DashboardOutlined,
+    FireOutlined,
 } from '@ant-design/icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
@@ -95,13 +96,14 @@ const mapApiTicket = (data) => {
         assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
         sla_deadline: data.created_at ? dayjs(data.created_at).add(4, 'hour').toISOString() : dayjs().add(2, 'hour').toISOString(), // Setup dummy SLA based on creation for demo
         created_at: data.created_at || new Date().toISOString(),
-        urgency: data.priority === 'high' ? 'High' : (data.priority === 'low' ? 'Low' : 'Medium'),
+        urgency: data.priority ? toSentenceCase(data.priority) : 'Medium',
         room: data.room,
         hostel_building: isValidBlock(data.hostel_building) ? data.hostel_building : '',
         description: data.description,
         resolved_time_hours: data.status === 'Closed' ? 2 : null,
         admin_notes: data.admin_comment || '',
-        phone: data.phone ? String(data.phone).substring(2) : ''
+        phone: data.phone ? String(data.phone).substring(2) : '',
+        name: data.name ? toSentenceCase(data.name) : ''
     };
 };
 
@@ -121,6 +123,7 @@ const AdminDashboard = () => {
     const [customDateRange, setCustomDateRange] = useState([null, null]);
     const [chartView, setChartView] = useState('Category'); // 'Category' or 'Block'
     const [filterBreached, setFilterBreached] = useState(false);
+    const [filterUrgent, setFilterUrgent] = useState(false);
 
     // Drawer state
     const [drawerVisible, setDrawerVisible] = useState(false);
@@ -219,20 +222,20 @@ const AdminDashboard = () => {
 
     const filteredTickets = tickets.filter(t => {
         const isBreached = checkSlaBreach(t.sla_deadline, t.status);
+        const isUrgent = t.urgency?.toUpperCase() === 'HIGH';
 
-        // If filterBreached is active, only show breached tickets, regardless of date filter
-        if (filterBreached) {
-            return isBreached;
-        }
+        if (filterBreached && !isBreached) return false;
+        if (filterUrgent && !isUrgent) return false;
 
-        // If filterBreached is NOT active, apply date filter
         let matchDate = true;
-        const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
-        if (dateFilter === '1W') matchDate = diffDays <= 7;
-        if (dateFilter === '1M') matchDate = diffDays <= 30;
-        if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
-            matchDate = dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
-                dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+        if (!filterBreached && !filterUrgent) {
+            const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
+            if (dateFilter === '1W') matchDate = diffDays <= 7;
+            if (dateFilter === '1M') matchDate = diffDays <= 30;
+            if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
+                matchDate = dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
+                    dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+            }
         }
 
         const matchCat = filterCategory.length > 0 ? filterCategory.includes(t.category) : true;
@@ -253,6 +256,7 @@ const AdminDashboard = () => {
         setSearchText('');
         setActiveKpiFilter(null);
         setFilterBreached(false);
+        setFilterUrgent(false);
     };
 
     // --- DRAWER ACTIONS ---
@@ -586,131 +590,137 @@ const AdminDashboard = () => {
             </Row>
 
             {/* Persistent Quick Filters Panel */}
-            <Card bodyStyle={{ padding: '16px 24px' }} className="border-slate-200 sticky top-0 z-20 shadow-md backdrop-blur bg-white/90">
-                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto flex-1">
+            <Card bodyStyle={{ padding: '12px 16px' }} className="border-slate-200 sticky top-0 z-20 shadow-md backdrop-blur bg-white/90">
+                <div className="flex flex-nowrap items-center gap-2 w-full overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                    <div className="flex items-center gap-2 shrink-0">
                         <Button
-                            type={filterBreached ? 'primary' : 'default'}
-                            danger={filterBreached}
+                            type="default"
                             onClick={() => setFilterBreached(!filterBreached)}
-                            className={filterBreached ? 'bg-red-500 border-red-500 shadow-sm font-medium' : 'font-medium text-slate-600 border-slate-300'}
+                            className={filterBreached ? '!bg-orange-500 !border-orange-500 !text-white shadow-sm font-medium shrink-0 hover:!bg-orange-600 hover:!border-orange-600' : 'font-medium text-slate-600 border-slate-300 shrink-0 hover:border-orange-500 hover:text-orange-500'}
                             icon={<WarningOutlined />}
                         >
                             Breached
                         </Button>
+                        <Button
+                            type={filterUrgent ? 'primary' : 'default'}
+                            danger={filterUrgent}
+                            onClick={() => setFilterUrgent(!filterUrgent)}
+                            className={filterUrgent ? 'bg-red-500 border-red-500 shadow-sm font-medium shrink-0' : 'font-medium text-slate-600 border-slate-300 shrink-0'}
+                            icon={<FireOutlined />}
+                        >
+                            Urgent
+                        </Button>
+                    </div>
 
+                    <Select
+                        mode="multiple"
+                        placeholder="Category"
+                        value={filterCategory}
+                        onChange={setFilterCategory}
+                        className="w-[130px] shrink-0"
+                        maxTagCount={1}
+                        bordered={true}
+                    >
+                        <Option value="Washing Machine">Washing Machine</Option>
+                        <Option value="Vending Machine">Vending Machine</Option>
+                        <Option value="Geyser">Geyser</Option>
+                        <Option value="Oven">Oven</Option>
+                        <Option value="Fridge">Fridge</Option>
+                        <Option value="Water Dispenser">Water Dispenser</Option>
+                        <Option value="Washroom Issues">Washroom Issues</Option>
+                        <Option value="WiFi">WiFi</Option>
+                        <Option value="Electrical">Electrical</Option>
+                        <Option value="AC">AC</Option>
+                        <Option value="Furniture">Furniture</Option>
+                    </Select>
+
+                    <Select
+                        mode="multiple"
+                        placeholder="Block"
+                        value={filterBlock}
+                        onChange={setFilterBlock}
+                        className="w-[100px] shrink-0"
+                        maxTagCount={1}
+                        bordered={true}
+                    >
+                        <Option value="B26">B26</Option>
+                        <Option value="B27">B27</Option>
+                        <Option value="B29">B29</Option>
+                        <Option value="B30">B30</Option>
+                        <Option value="LH">LH</Option>
+                    </Select>
+
+                    <div className="flex items-center gap-2 shrink-0">
                         <Select
-                            mode="multiple"
-                            placeholder="Category"
-                            value={filterCategory}
-                            onChange={setFilterCategory}
-                            className="min-w-[140px] flex-1 max-w-[200px]"
-                            maxTagCount="responsive"
+                            value={dateFilter}
+                            onChange={setDateFilter}
+                            className="w-[110px]"
                             bordered={true}
+                            disabled={filterBreached || filterUrgent}
                         >
-                            <Option value="Washing Machine">Washing Machine</Option>
-                            <Option value="Vending Machine">Vending Machine</Option>
-                            <Option value="Geyser">Geyser</Option>
-                            <Option value="Oven">Oven</Option>
-                            <Option value="Fridge">Fridge</Option>
-                            <Option value="Water Dispenser">Water Dispenser</Option>
-                            <Option value="Washroom Issues">Washroom Issues</Option>
-                            <Option value="WiFi">WiFi</Option>
-                            <Option value="Electrical">Electrical</Option>
-                            <Option value="AC">AC</Option>
-                            <Option value="Furniture">Furniture</Option>
+                            <Option value="1W">1 Week</Option>
+                            <Option value="1M">1 Month</Option>
+                            <Option value="CUSTOM">Custom</Option>
                         </Select>
 
-                        <Select
-                            mode="multiple"
-                            placeholder="Block"
-                            value={filterBlock}
-                            onChange={setFilterBlock}
-                            className="min-w-[100px] flex-1 max-w-[150px]"
-                            maxTagCount="responsive"
-                            bordered={true}
-                        >
-                            <Option value="B26">B26</Option>
-                            <Option value="B27">B27</Option>
-                            <Option value="B29">B29</Option>
-                            <Option value="B30">B30</Option>
-                            <Option value="LH">LH</Option>
-                        </Select>
-
-                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                            <Select
-                                value={dateFilter}
-                                onChange={setDateFilter}
-                                className="w-32"
-                                bordered={true}
-                                disabled={filterBreached} // Disable date filter if breached is active
-                            >
-                                <Option value="1W">Last 1 Week</Option>
-                                <Option value="1M">Last 1 Month</Option>
-                                <Option value="CUSTOM">Custom</Option>
-                            </Select>
-
-                            {dateFilter === 'CUSTOM' && !filterBreached && (
-                                <RangePicker
-                                    onChange={(dates) => setCustomDateRange(dates || [null, null])}
-                                    value={customDateRange}
-                                    className="rounded-lg w-[240px]"
-                                />
-                            )}
-                        </div>
-
-                        <Select
-                            mode="multiple"
-                            placeholder="Status"
-                            value={filterStatus}
-                            onChange={setFilterStatus}
-                            className="min-w-[120px] flex-1 max-w-[160px]"
-                            maxTagCount="responsive"
-                        >
-                            <Option value="Open">Open</Option>
-                            <Option value="Assigned">Assigned</Option>
-                            <Option value="Closed">Closed</Option>
-                        </Select>
-
-                        <Select
-                            mode="multiple"
-                            placeholder="Technician"
-                            value={filterTechnician}
-                            onChange={setFilterTechnician}
-                            className="min-w-[140px] flex-1 max-w-[200px]"
-                            maxTagCount="responsive"
-                        >
-                            <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
-                            <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
-                            <Option value="Tech 03 (Washroom Issues)">Tech 03 (Washroom Issues)</Option>
-                            <Option value="Tech 04 (Water Dispenser)">Tech 04 (Water Dispenser)</Option>
-                            <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
-                            <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
-                            <Option value="Tech 07 (WiFi)">Tech 07 (WiFi)</Option>
-                            <Option value="Tech 08 (Vending Machine)">Tech 08 (Vending Machine)</Option>
-                            <Option value="Tech 09 (Geyser)">Tech 09 (Geyser)</Option>
-                            <Option value="Tech 10 (Oven)">Tech 10 (Oven)</Option>
-                            <Option value="Tech 11 (Fridge)">Tech 11 (Fridge)</Option>
-                            <Option value="Tech 12 (Furniture)">Tech 12 (Furniture)</Option>
-                        </Select>
-
-                        {(filterCategory.length > 0 || filterStatus.length > 0 || filterTechnician.length > 0 || searchText || activeKpiFilter || filterBreached) && (
-                            <Button type="link" onClick={clearAllFilters} className="text-slate-500 hover:text-indigo-600 font-medium">
-                                Clear Filters
-                            </Button>
+                        {dateFilter === 'CUSTOM' && !(filterBreached || filterUrgent) && (
+                            <RangePicker
+                                onChange={(dates) => setCustomDateRange(dates || [null, null])}
+                                value={customDateRange}
+                                className="rounded-lg w-[200px]"
+                            />
                         )}
                     </div>
 
-                    <div className="w-full lg:w-auto">
-                        <Input
-                            placeholder="Search ID, Summary, Room..."
-                            prefix={<SearchOutlined className="text-slate-300" />}
-                            value={searchText}
-                            onChange={e => setSearchText(e.target.value)}
-                            className="w-full lg:w-64 rounded-lg"
-                            allowClear
-                        />
-                    </div>
+                    <Select
+                        mode="multiple"
+                        placeholder="Status"
+                        value={filterStatus}
+                        onChange={setFilterStatus}
+                        className="w-[110px] shrink-0"
+                        maxTagCount={1}
+                    >
+                        <Option value="Open">Open</Option>
+                        <Option value="Assigned">Assigned</Option>
+                        <Option value="Closed">Closed</Option>
+                    </Select>
+
+                    <Select
+                        mode="multiple"
+                        placeholder="Technician"
+                        value={filterTechnician}
+                        onChange={setFilterTechnician}
+                        className="w-[130px] shrink-0"
+                        maxTagCount={1}
+                    >
+                        <Option value="Tech 01 (AC)">Tech 01 (AC)</Option>
+                        <Option value="Tech 02 (Electrical)">Tech 02 (Electrical)</Option>
+                        <Option value="Tech 03 (Washroom Issues)">Tech 03 (Washroom Issues)</Option>
+                        <Option value="Tech 04 (Water Dispenser)">Tech 04 (Water Dispenser)</Option>
+                        <Option value="Tech 05 (Washing Machine)">Tech 05 (Washing Machine)</Option>
+                        <Option value="Tech 06 (Cleaning)">Tech 06 (Cleaning)</Option>
+                        <Option value="Tech 07 (WiFi)">Tech 07 (WiFi)</Option>
+                        <Option value="Tech 08 (Vending Machine)">Tech 08 (Vending Machine)</Option>
+                        <Option value="Tech 09 (Geyser)">Tech 09 (Geyser)</Option>
+                        <Option value="Tech 10 (Oven)">Tech 10 (Oven)</Option>
+                        <Option value="Tech 11 (Fridge)">Tech 11 (Fridge)</Option>
+                        <Option value="Tech 12 (Furniture)">Tech 12 (Furniture)</Option>
+                    </Select>
+
+                    <Input
+                        placeholder="Search..."
+                        prefix={<SearchOutlined className="text-slate-300" />}
+                        value={searchText}
+                        onChange={e => setSearchText(e.target.value)}
+                        className="w-[140px] shrink-0 rounded-lg flex-1 min-w-[120px]"
+                        allowClear
+                    />
+
+                    {(filterCategory.length > 0 || filterStatus.length > 0 || filterTechnician.length > 0 || searchText || activeKpiFilter || filterBreached || filterUrgent || filterBlock.length > 0) && (
+                        <Button type="link" onClick={clearAllFilters} className="text-slate-500 hover:text-indigo-600 font-medium shrink-0 px-2">
+                            Clear
+                        </Button>
+                    )}
                 </div>
             </Card >
 
@@ -780,12 +790,20 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Urgency</span>
-                                <span className={`font-bold ${editingTicket.urgency === 'High' ? 'text-red-500' : 'text-amber-500'}`}>{editingTicket.urgency}</span>
+                                <span className={`font-bold ${editingTicket.urgency?.toUpperCase() === 'HIGH' ? 'text-red-500' : (editingTicket.urgency?.toUpperCase() === 'LOW' ? 'text-purple-500' : 'text-amber-500')}`}>{editingTicket.urgency?.toUpperCase() || 'MEDIUM'}</span>
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Contact Number</span>
                                 {editingTicket.phone ? (
                                     <span className="font-semibold text-slate-700 font-mono">{editingTicket.phone}</span>
+                                ) : (
+                                    <span className="font-semibold text-slate-400 italic">Not provided</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Name</span>
+                                {editingTicket.name ? (
+                                    <span className="font-semibold text-slate-700">{editingTicket.name}</span>
                                 ) : (
                                     <span className="font-semibold text-slate-400 italic">Not provided</span>
                                 )}
