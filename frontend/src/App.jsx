@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import TechnicianDashboard from './pages/TechnicianDashboard';
 import TechnicianHistory from './pages/TechnicianHistory';
+import QuerySection from './pages/QuerySection';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route index element={<Navigate to="tickets" replace />} />
             <Route path="tickets" element={<AdminDashboard />} />
             <Route path="analytics" element={<AnalyticsDashboard />} />
+            <Route path="query" element={<QuerySection />} />
           </Route>
 
           <Route path="/technician" element={<MainLayout role="technician" />}>

@@ -13,15 +13,22 @@ import {
     ClockCircleOutlined,
     DashboardOutlined,
     FireOutlined,
+    DownloadOutlined,
+    CloseOutlined,
 } from '@ant-design/icons';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, Legend, LabelList
 } from 'recharts';
 import CountUp from 'react-countup';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import isBetween from 'dayjs/plugin/isBetween';
+import minMax from 'dayjs/plugin/minMax';
+import * as XLSX from 'xlsx';
 
 dayjs.extend(relativeTime);
+dayjs.extend(isBetween);
+dayjs.extend(minMax);
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -82,11 +89,20 @@ const getAssignedTech = (mappedCategory) => {
     }
 };
 
-const isValidBlock = (block) => ['B26', 'B27', 'B29', 'B30', 'LH'].includes(block);
+const isValidBlock = (block) => {
+    if (!block) return false;
+    const b = block.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return ['B26', 'B27', 'B29', 'B30', 'LH'].includes(b);
+};
 
 const mapApiTicket = (data) => {
     const mappedCategory = getCategory(data.category);
     const toSentenceCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+    
+    // Robust block matching
+    const rawBlock = data.hostel_building || (data.room ? data.room.split(' ')[0] : '');
+    const normalizedBlock = rawBlock ? rawBlock.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+
     return {
         id: data.id.substring(0, 8).toUpperCase(), // Simplify UUID
         raw_id: data.id, // Backend exact ID
@@ -98,12 +114,12 @@ const mapApiTicket = (data) => {
         created_at: data.created_at || new Date().toISOString(),
         urgency: data.priority ? toSentenceCase(data.priority) : 'Medium',
         room: data.room,
-        hostel_building: isValidBlock(data.hostel_building) ? data.hostel_building : '',
+        hostel_building: isValidBlock(normalizedBlock) ? normalizedBlock : '',
         description: data.description,
         resolved_time_hours: data.status === 'Closed' ? 2 : null,
         admin_notes: data.admin_comment || '',
-        phone: data.phone ? String(data.phone).substring(2) : '',
-        name: data.name ? toSentenceCase(data.name) : ''
+        contact_number: data.phone ? String(data.phone).substring(2) : 'NA',
+        student_name: data.name ? toSentenceCase(data.name) : 'Anonymous'
     };
 };
 
@@ -113,17 +129,18 @@ const AdminDashboard = () => {
     const [currentTime, setCurrentTime] = useState(dayjs());
 
     // Advanced Multi-Filters State
-    const [activeKpiFilter, setActiveKpiFilter] = useState(null); // 'Total', 'Open', 'Assigned', 'Closed'
+    const [activeKpiFilter, setActiveKpiFilter] = useState(null); // 'Total', 'Unassigned', 'Assigned', 'Closed'
     const [filterCategory, setFilterCategory] = useState([]);
     const [filterBlock, setFilterBlock] = useState([]);
     const [filterStatus, setFilterStatus] = useState([]);
     const [filterTechnician, setFilterTechnician] = useState([]);
     const [searchText, setSearchText] = useState('');
-    const [dateFilter, setDateFilter] = useState('1M'); // '1W', '1M', 'CUSTOM'
+    const [dateFilter, setDateFilter] = useState('1W'); // '1D', '1W', '1M', 'CUSTOM'
     const [customDateRange, setCustomDateRange] = useState([null, null]);
     const [chartView, setChartView] = useState('Category'); // 'Category' or 'Block'
     const [filterBreached, setFilterBreached] = useState(false);
     const [filterUrgent, setFilterUrgent] = useState(false);
+    const [showDataRangeInfo, setShowDataRangeInfo] = useState(true);
 
     // Drawer state
     const [drawerVisible, setDrawerVisible] = useState(false);
@@ -156,11 +173,12 @@ const AdminDashboard = () => {
     const filteredByDateAndBlockTickets = tickets.filter(t => {
         // Date Logic
         const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
+        const diffHours = dayjs().diff(dayjs(t.created_at), 'hour');
+        if (dateFilter === '1D') return diffHours <= 24;
         if (dateFilter === '1W') return diffDays <= 7;
         if (dateFilter === '1M') return diffDays <= 30;
         if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
-            return dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
-                dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+            return dayjs(t.created_at).isBetween(customDateRange[0].startOf('day'), customDateRange[1].endOf('day'), null, '[]');
         }
         return true;
     });
@@ -172,50 +190,78 @@ const AdminDashboard = () => {
         closed: filteredByDateAndBlockTickets.filter(t => t.status === 'Closed').length,
     };
 
-    const formatter = (value) => <CountUp end={value} duration={1.5} className="kpi-number" />;
-
-    // 1. Most frequent issues Data
-    const getCommonIssues = () => {
-        const counts = {};
-        if (chartView === 'Category') {
-            filteredByDateAndBlockTickets.forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
-        } else {
-            filteredByDateAndBlockTickets.forEach(t => {
-                const block = t.hostel_building || (isValidBlock(t.room) ? t.room : ''); // fallback just in case
-                if (isValidBlock(block)) {
-                    counts[block] = (counts[block] || 0) + 1;
-                }
-            });
-        }
-        return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).sort((a, b) => b.count - a.count).slice(0, 5);
-    };
-    const commonIssuesData = getCommonIssues();
-    const CATEGORY_COLORS = { 'AC': '#4F46E5', 'Water Cooler': '#0EA5E9', 'Cleaning': '#10B981', 'Electrical': '#F59E0B', 'Washing Machine': '#8B5CF6', 'Washroom Issues': '#EC4899', 'WiFi': '#14B8A6', 'Furniture': '#F97316', 'Fridge': '#3B82F6', 'Oven': '#EF4444', 'Vending Machine': '#FBBF24', 'Geyser': '#06B6D4', 'Water Dispenser': '#84CC16' };
-
-    // --- FILTERING LOGIC ---
-    const handleKpiClick = (kpi) => {
-        if (activeKpiFilter === kpi) {
+    const handleKpiClick = (type) => {
+        if (activeKpiFilter === type) {
             setActiveKpiFilter(null);
             setFilterStatus([]);
         } else {
-            setActiveKpiFilter(kpi);
-            if (kpi !== 'Total') setFilterStatus([kpi]);
-            else setFilterStatus([]);
+            setActiveKpiFilter(type);
+            if (type === 'Total') setFilterStatus([]);
+            else if (type === 'Unassigned') setFilterStatus(['Open']);
+            else setFilterStatus([type]);
         }
     };
 
+    const formatter = (value) => <CountUp end={value} duration={1.5} className="kpi-number" />;
+
+    const getCommonIssues = () => {
+        // Only Unassigned + Assigned tickets for active issues tracker
+        let listToUse = filteredByDateAndBlockTickets.filter(t => t.status === 'Open' || t.status === 'Assigned');
+        const groups = {};
+        
+        if (chartView === 'Block') {
+            ['B26', 'B27', 'B29', 'LH', 'B30'].forEach(b => groups[b] = { name: b, count: 0, Assigned: 0, UnAssigned: 0 });
+            listToUse.forEach(t => { 
+                const b = t.hostel_building || (isValidBlock(t.room) ? t.room : '');
+                if (groups[b]) {
+                    groups[b].count++;
+                    if (t.status === 'Assigned') groups[b].Assigned++;
+                    if (t.status === 'Open') groups[b].UnAssigned++;
+                }
+            });
+            return Object.values(groups).filter(g => g.count > 0).sort((a, b) => b.count - a.count).slice(0, 5);
+        } else {
+            listToUse.forEach(t => { 
+                if (!groups[t.category]) groups[t.category] = { name: t.category, count: 0, Assigned: 0, UnAssigned: 0 };
+                groups[t.category].count++;
+                if (t.status === 'Assigned') groups[t.category].Assigned++;
+                if (t.status === 'Open') groups[t.category].UnAssigned++;
+            });
+            return Object.values(groups).sort((a, b) => b.count - a.count).slice(0, 5);
+        }
+    };
+    const commonIssuesData = getCommonIssues();    const CATEGORY_COLORS = { 
+        'AC': '#a78bfa', // Violet 400
+        'Water Dispenser': '#7dd3fc', // Sky 300
+        'Water Cooler': '#7dd3fc',
+        'Cleaning': '#6ee7b7', // Emerald 300
+        'Electrical': '#fbbf24', // Amber 400
+        'Washing Machine': '#c084fc', // Purple 400
+        'Washroom Issues': '#f472b6', // Pink 400
+        'WiFi': '#5eead4', // Teal 300
+        'Furniture': '#fb923c', // Orange 400
+        'Fridge': '#93c5fd', // Blue 300
+        'Oven': '#f87171', // Red 400
+        'Vending Machine': '#facc15', // Yellow 400
+        'Geyser': '#67e8f9', // Cyan 300
+        'Other': '#94A3B8' // Slate 400
+    };
+
+    // --- FILTERING LOGIC ---
+
+
     const handleChartClick = (data) => {
-        if (!data || !data.activePayload) {
-            if (chartView === 'Category') setFilterCategory([]);
-            else setFilterBlock([]);
+        if (!data || !data.activeLabel) {
+            setFilterCategory([]);
+            setFilterBlock([]);
             return;
         }
-        const val = data.activePayload[0].payload.name;
+        const val = data.activeLabel;
         if (chartView === 'Category') {
-            setFilterCategory([val]);
-            setFilterBlock([]); // mutually exclusive quick filtering from chart
+            setFilterCategory(prev => prev.includes(val) ? [] : [val]);
+            setFilterBlock([]);
         } else {
-            setFilterBlock([val]);
+            setFilterBlock(prev => prev.includes(val) ? [] : [val]);
             setFilterCategory([]);
         }
     };
@@ -230,11 +276,12 @@ const AdminDashboard = () => {
         let matchDate = true;
         if (!filterBreached && !filterUrgent) {
             const diffDays = dayjs().diff(dayjs(t.created_at), 'day');
+            const diffHours = dayjs().diff(dayjs(t.created_at), 'hour');
+            if (dateFilter === '1D') matchDate = diffHours <= 24;
             if (dateFilter === '1W') matchDate = diffDays <= 7;
             if (dateFilter === '1M') matchDate = diffDays <= 30;
             if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
-                matchDate = dayjs(t.created_at).isAfter(customDateRange[0].startOf('day')) &&
-                    dayjs(t.created_at).isBefore(customDateRange[1].endOf('day'));
+                matchDate = dayjs(t.created_at).isBetween(customDateRange[0].startOf('day'), customDateRange[1].endOf('day'), null, '[]');
             }
         }
 
@@ -315,6 +362,39 @@ const AdminDashboard = () => {
         onCloseDrawer();
     };
 
+    const handleExportExcel = () => {
+        const exportData = filteredTickets.map(t => ({
+            'Ticket ID': t.id,
+            'Student Name': t.student_name || 'Anonymous',
+            'Contact Number': t.contact_number || 'NA',
+            'Category': t.category,
+            'Summary': t.summary,
+            'Status': t.status === 'Open' ? 'Unassigned' : t.status,
+            'Assigned To': t.assigned_to || 'Unassigned',
+            'Block': t.hostel_building,
+            'Room': t.room,
+            'SLA Deadline': dayjs(t.sla_deadline).format('DD MMM YYYY, hh:mm A'),
+            'Created At': dayjs(t.created_at).format('DD MMM YYYY, hh:mm A'),
+            'Urgency': t.urgency,
+            'Admin Notes': t.admin_notes || ''
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+        XLSX.writeFile(wb, `Campus_Companion_Tickets_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+        message.success('Excel export started');
+    };
+
+    const getDataRangeString = () => {
+        if (filteredTickets.length === 0) return "No data in current range";
+        const dates = filteredTickets.map(t => dayjs(t.created_at));
+        const minDate = dayjs.min ? dayjs.min(dates) : dates.reduce((a, b) => a.isBefore(b) ? a : b);
+        const maxDate = dayjs.max ? dayjs.max(dates) : dates.reduce((a, b) => a.isAfter(b) ? a : b);
+
+        return `Showing data from ${minDate.format('DD MMM YYYY, hh:mm A')} to ${maxDate.format('DD MMM YYYY, hh:mm A')}`;
+    };
+
     // --- HELPERS ---
     const getStatusColor = (status) => {
         switch (status) {
@@ -334,7 +414,7 @@ const AdminDashboard = () => {
     const categoryFrequencies = {};
     const ALL_CATEGORIES = [
         "Washing Machine", "Vending Machine", "Geyser", "Oven", "Fridge",
-        "Water Dispenser", "Washroom Issues", "WiFi", "Electrical", "AC", "Furniture", "Cleaning"
+        "Water Dispenser", "Washroom Issues", "WiFi", "Electrical", "AC", "Furniture", "Cleaning", "Other"
     ];
 
     ALL_CATEGORIES.forEach(cat => categoryFrequencies[cat] = 0);
@@ -364,7 +444,7 @@ const AdminDashboard = () => {
             })),
             onFilter: (value, record) => record.category === value,
             render: (text) => (
-                <Tag color={CATEGORY_COLORS[text] || 'default'} className="rounded-full px-3 font-medium border-0 shadow-sm whitespace-nowrap">
+                <Tag color={CATEGORY_COLORS[text] || 'default'} className="rounded-full px-3 font-semibold border-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] whitespace-nowrap" style={{ color: '#1e293b' }}>
                     {text}
                 </Tag>
             ),
@@ -374,28 +454,31 @@ const AdminDashboard = () => {
             dataIndex: 'summary',
             key: 'summary',
             width: '25%',
-            render: (text, record) => (
-                <div className="flex flex-col">
-                    <span className="font-medium text-slate-800 break-words line-clamp-2" title={text}>{text}</span>
-                    <a className="text-indigo-600 text-xs mt-1 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); openDrawer(record); }}>
-                        Read more
-                    </a>
-                </div>
-            )
+            render: (text, record) => {
+                const sentenceCaseText = text ? text.charAt(0).toUpperCase() + text.slice(1).toLowerCase() : '';
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-slate-800 break-words line-clamp-2" title={sentenceCaseText}>{sentenceCaseText}</span>
+                        <a className="text-indigo-600 text-xs mt-1 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); openDrawer(record); }}>
+                            Read more
+                        </a>
+                    </div>
+                );
+            }
         },
         {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
             filters: [
-                { text: 'Open', value: 'Open' },
+                { text: 'Unassigned', value: 'Open' },
                 { text: 'Assigned', value: 'Assigned' },
                 { text: 'Closed', value: 'Closed' },
             ],
             onFilter: (value, record) => record.status === value,
             render: (status) => (
                 <Tag color={getStatusColor(status)} className="rounded-full px-3 uppercase tracking-wider text-[10px] font-bold border-0">
-                    {status}
+                    {status === 'Open' ? 'Unassigned' : status}
                 </Tag>
             ),
         },
@@ -468,6 +551,11 @@ const AdminDashboard = () => {
     // 4. Quick Filters
     // 5. Table
 
+    const minMaxDate = {
+        min: filteredTickets.length > 0 ? dayjs.min(filteredTickets.map(t => dayjs(t.created_at))) : dayjs().subtract(7, 'day'),
+        max: filteredTickets.length > 0 ? dayjs.max(filteredTickets.map(t => dayjs(t.created_at))) : dayjs()
+    };
+
     return (
         <div className="space-y-8 animate-fade-in-up">
             <div className="flex justify-between items-center">
@@ -499,13 +587,13 @@ const AdminDashboard = () => {
                         </Col>
                         <Col xs={24} sm={12} className="h-[132px]">
                             <div
-                                onClick={() => handleKpiClick('Open')}
+                                onClick={() => handleKpiClick('Unassigned')}
                                 className={`h-full cursor-pointer rounded-2xl p-6 border transition-all duration-300 shadow-sm flex flex-col justify-center
-              ${activeKpiFilter === 'Open' ? 'bg-red-50 border-red-300 shadow-md transform -translate-y-1' : 'bg-gradient-to-br from-white to-slate-50 border-slate-100 hover:-translate-y-1 hover:shadow-lg'}
+              ${activeKpiFilter === 'Unassigned' ? 'bg-red-50 border-red-300 shadow-md transform -translate-y-1' : 'bg-gradient-to-br from-white to-slate-50 border-slate-100 hover:-translate-y-1 hover:shadow-lg'}
             `}
                             >
                                 <Statistic
-                                    title={<span className="text-slate-500 font-semibold tracking-wider uppercase text-xs flex items-center gap-2"><WarningOutlined className="text-red-400" /> Open Tickets</span>}
+                                    title={<span className="text-slate-500 font-semibold tracking-wider uppercase text-xs flex items-center gap-2"><WarningOutlined className="text-red-400" /> UnAssigned tickets</span>}
                                     value={kpiData.open}
                                     formatter={formatter}
                                     valueStyle={{ color: '#EF4444' }}
@@ -562,29 +650,56 @@ const AdminDashboard = () => {
                     >
                         <div className="w-full flex-grow relative min-h-[150px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={commonIssuesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} onClick={handleChartClick}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 13, fontWeight: 500 }} />
-                                    <YAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 12 }} />
-                                    <RechartsTooltip
-                                        cursor={{ fill: '#F8FAFC' }}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                        itemStyle={{ fontWeight: 600, color: '#1E293B' }}
+                                <BarChart
+                                    data={commonIssuesData}
+                                    margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+                                    onClick={handleChartClick}
+                                    barSize={40}
+                                    layout="horizontal"
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                    <XAxis
+                                        dataKey="name"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#475569', fontSize: 12, fontWeight: 500 }}
                                     />
-                                    <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40} className="cursor-pointer">
-                                        {commonIssuesData.map((entry, index) => {
-                                            const isActive = chartView === 'Block' ? (filterBlock.length === 0 || filterBlock.includes(entry.name)) : (filterCategory.length === 0 || filterCategory.includes(entry.name));
-                                            return (
-                                                <Cell key={`cell-${index}`} fill={chartView === 'Block' ? '#F59E0B' : (CATEGORY_COLORS[entry.name] || '#94A3B8')}
-                                                    style={{ opacity: isActive ? 1 : 0.3 }}
-                                                />
-                                            );
-                                        })}
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#475569', fontSize: 13 }}
+                                        allowDecimals={false}
+                                    />
+                                    <RechartsTooltip
+                                        cursor={{ fill: '#f1f5f9' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Legend 
+                                        verticalAlign="top" 
+                                        align="right" 
+                                        iconType="circle" 
+                                        wrapperStyle={{ paddingBottom: '10px', fontSize: '11px', fontWeight: 600 }}
+                                    />
+                                    <Bar
+                                        dataKey="Assigned"
+                                        stackId="a"
+                                        fill="#fdba74"
+                                        radius={[0, 0, 0, 0]}
+                                        cursor="pointer"
+                                    />
+                                    <Bar
+                                        dataKey="UnAssigned"
+                                        stackId="a"
+                                        fill="#fca5a5"
+                                        radius={[6, 6, 0, 0]}
+                                        cursor="pointer"
+                                    >
+                                        <LabelList dataKey="count" position="top" offset={10} fill="#64748B" fontWeight={700} fontSize={14} />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click a bar to filter the ticket queue. Click chart background to reset.</div>
+                        <div className="text-xs text-slate-400 mt-auto pt-4 text-right tracking-tight font-medium">Click chart background to reset.</div>
                     </Card>
                 </Col>
             </Row>
@@ -650,40 +765,28 @@ const AdminDashboard = () => {
                         <Option value="LH">LH</Option>
                     </Select>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Select
-                            value={dateFilter}
-                            onChange={setDateFilter}
-                            className="w-[110px]"
-                            bordered={true}
-                            disabled={filterBreached || filterUrgent}
-                        >
-                            <Option value="1W">1 Week</Option>
-                            <Option value="1M">1 Month</Option>
-                            <Option value="CUSTOM">Custom</Option>
-                        </Select>
-
-                        {dateFilter === 'CUSTOM' && !(filterBreached || filterUrgent) && (
-                            <RangePicker
-                                onChange={(dates) => setCustomDateRange(dates || [null, null])}
-                                value={customDateRange}
-                                className="rounded-lg w-[200px]"
-                            />
-                        )}
-                    </div>
-
                     <Select
-                        mode="multiple"
-                        placeholder="Status"
-                        value={filterStatus}
-                        onChange={setFilterStatus}
+                        value={dateFilter}
+                        onChange={setDateFilter}
                         className="w-[110px] shrink-0"
-                        maxTagCount={1}
+                        disabled={filterBreached || filterUrgent}
+                        dropdownStyle={{ borderRadius: '12px' }}
                     >
-                        <Option value="Open">Open</Option>
-                        <Option value="Assigned">Assigned</Option>
-                        <Option value="Closed">Closed</Option>
+                        <Option value="1D">1 Day</Option>
+                        <Option value="1W">1 Week</Option>
+                        <Option value="1M">1 Month</Option>
+                        <Option value="CUSTOM">Custom</Option>
                     </Select>
+
+                    {dateFilter === 'CUSTOM' && !(filterBreached || filterUrgent) && (
+                        <RangePicker
+                            onChange={(dates) => setCustomDateRange(dates || [null, null])}
+                            value={customDateRange}
+                            className="rounded-lg w-[210px] shrink-0"
+                        />
+                    )}
+
+
 
                     <Select
                         mode="multiple"
@@ -721,8 +824,34 @@ const AdminDashboard = () => {
                             Clear
                         </Button>
                     )}
+
+                    <Button
+                        icon={<DownloadOutlined />}
+                        onClick={handleExportExcel}
+                        className="shrink-0 rounded-lg border-slate-300 text-slate-600 hover:text-indigo-600 hover:border-indigo-600 ml-auto"
+                    >
+                        Export
+                    </Button>
                 </div>
             </Card >
+
+            {showDataRangeInfo && filteredTickets.length > 0 && (
+                <div className="px-5 py-2 bg-indigo-50/50 border border-indigo-100 rounded-xl flex justify-between items-center animate-fade-in gap-4 mb-4 mt-2">
+                    <div className="flex items-center gap-3 italic text-xs text-indigo-700 font-medium">
+                        <ClockCircleOutlined className="text-indigo-500" />
+                        <span>Showing data from <span className="font-bold underline">{dayjs(minMaxDate.min).format('DD MMM YYYY, hh:mm A')}</span> to <span className="font-bold underline">{dayjs(minMaxDate.max).format('DD MMM YYYY, hh:mm A')}</span></span>
+                    </div>
+                    <Button 
+                        type="text" 
+                        size="small" 
+                        icon={<CloseOutlined className="text-indigo-300" />} 
+                        onClick={() => setShowDataRangeInfo(false)}
+                        className="hover:!text-indigo-600"
+                    />
+                </div>
+            )}
+
+
 
             {/* Main Tickets Table */}
             < Card id="tickets-table" className="shadow-sm border-slate-200 mt-6" >
@@ -825,7 +954,7 @@ const AdminDashboard = () => {
                 <Form layout="vertical" form={form} onFinish={handleUpdateTicket} requiredMark={false} size="large">
                     <Form.Item label={<span className="font-medium text-slate-700">Ticket Status</span>} name="status" rules={[{ required: true }]}>
                         <Select>
-                            <Option value="Open"><div className="flex items-center gap-2"><Tag color="error" className="m-0 border-0 rounded">Open</Tag> Needs assignment</div></Option>
+                            <Option value="Open"><div className="flex items-center gap-2"><Tag color="error" className="m-0 border-0 rounded">Unassigned</Tag> Needs assignment</div></Option>
                             <Option value="Assigned"><div className="flex items-center gap-2"><Tag color="warning" className="m-0 border-0 rounded">Assigned</Tag> Work in progress</div></Option>
                             <Option value="Closed"><div className="flex items-center gap-2"><Tag color="success" className="m-0 border-0 rounded">Closed</Tag> Issue resolved</div></Option>
                         </Select>

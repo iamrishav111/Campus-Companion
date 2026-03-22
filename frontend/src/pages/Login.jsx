@@ -32,38 +32,47 @@ const Login = () => {
     };
 
     return (
-        <div className="h-screen overflow-hidden flex bg-slate-50 animate-fade-in-up">
-            {/* Left side: Premium Branding/Visual (Splitscreen) */}
-            <div className="hidden lg:flex lg:w-1/2 bg-purple-700 items-center justify-center relative overflow-hidden">
-                {/* Rich SaaS style gradient blobs */}
-                <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-purple-600 rounded-full mix-blend-multiply filter blur-[80px] opacity-70"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-purple-800 rounded-full mix-blend-multiply filter blur-[80px] opacity-70"></div>
-
-                <div className="relative z-10 text-white max-w-lg p-12">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-2xl">
-                            <SettingOutlined className="text-3xl" />
-                        </div>
-                        <h1 className="m-0 tracking-tight font-extrabold text-white" style={{ fontSize: '42px' }}>Campus Companion</h1>
-                    </div>
-                    <p className="text-purple-100/90 text-[20px] font-medium leading-relaxed">
-                        Enterprise-grade facility operations command center. <br />
-                        <span className="font-light text-[16px] text-purple-200 mt-2 block">Optimized for rapid resolution.</span>
-                    </p>
-                </div>
+        <div className="h-screen w-full relative overflow-hidden flex items-center justify-center font-sans bg-[#fafaff]">
+            {/* Sophisticated Background Layers */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-5%] w-[600px] h-[600px] bg-purple-200/40 rounded-full mix-blend-multiply filter blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
             </div>
 
-            {/* Right side: Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white/60 backdrop-blur-lg overflow-y-auto">
-                <div className="w-full max-w-md animate-fade-in-up my-auto" style={{ animationDelay: '150ms' }}>
-                    <div className="text-center mb-6 lg:hidden">
-                        <Title level={2} className="text-gray-900 m-0">Campus Companion</Title>
+            <div className="relative z-10 w-full max-w-6xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+                
+                {/* Branding Side - High-End Editorial Style */}
+                <div className="w-full lg:w-1/2 flex flex-col items-start text-left space-y-8 animate-fade-in-up">
+                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-md rounded-full border border-white/80 shadow-sm">
+                        <SettingOutlined className="text-purple-600 font-bold" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Facility Command Center</span>
                     </div>
 
-                    <Card className="shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] border border-slate-100 bg-white" style={{ borderRadius: '24px', padding: '16px 20px' }}>
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-semibold text-slate-800 mb-2">Welcome Back</h2>
-                            <p className="text-slate-500 text-sm">Please sign in to your operations portal</p>
+                    <div className="space-y-4">
+                        <h1 className="text-[56px] lg:text-[72px] font-black text-slate-900 leading-[0.95] tracking-tighter m-0">
+                            Campus <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">Companion</span>
+                        </h1>
+                        <p className="text-slate-500 text-xl lg:text-2xl font-bold leading-relaxed max-w-md">
+                            One stop place for tracking <br />
+                            <span className="text-slate-900">Campus Complaints</span>
+                        </p>
+                    </div>
+
+
+                </div>
+
+                {/* Login Card - Glassmorphism */}
+                <div className="w-full lg:w-[450px] animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <Card 
+                        className="overflow-hidden border-0 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] bg-white/70 backdrop-blur-2xl" 
+                        style={{ borderRadius: '32px' }}
+                        bodyStyle={{ padding: '48px 40px' }}
+                    >
+                        <div className="mb-10">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2">Welcome Back</h2>
+                            <p className="text-slate-500 font-medium italic">Please sign in to your secure portal</p>
                         </div>
 
                         {error && (
@@ -71,7 +80,7 @@ const Login = () => {
                                 message={error}
                                 type="error"
                                 showIcon
-                                className="mb-6 rounded-xl border border-red-200 bg-red-50 text-red-700"
+                                className="mb-8 rounded-2xl border-red-100 bg-red-50/50 text-red-700 font-medium"
                             />
                         )}
 
@@ -84,57 +93,55 @@ const Login = () => {
                         >
                             <Form.Item
                                 name="email"
-                                label={<span className="text-sm font-medium text-slate-700">Email Address</span>}
+                                label={<span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Work Email</span>}
                                 rules={[
-                                    { required: true, message: 'Please input your email!' },
-                                    { type: 'email', message: 'Please enter a valid email!' }
+                                    { required: true, message: 'Required' },
+                                    { type: 'email', message: 'Invalid email' }
                                 ]}
                             >
                                 <Input
-                                    prefix={<UserOutlined className="text-slate-400 mr-2" />}
-                                    placeholder="name@spjimr.org"
-                                    className="rounded-xl h-[48px] bg-slate-50 border-slate-200 hover:border-purple-400 focus:border-purple-500 focus:shadow-[0_0_0_2px_rgba(147,51,234,0.1)] transition-all"
+                                    prefix={<UserOutlined className="text-slate-300 mr-2" />}
+                                    placeholder="admin@spjimr.org"
+                                    className="rounded-2xl h-[56px] bg-white border-slate-100 hover:border-purple-300 focus:border-purple-500 shadow-sm transition-all text-base font-medium"
                                 />
                             </Form.Item>
 
                             <Form.Item
                                 name="password"
-                                label={<span className="text-sm font-medium text-slate-700">Password</span>}
-                                rules={[{ required: true, message: 'Please input your password!' }]}
+                                label={<span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Security Key</span>}
+                                rules={[{ required: true, message: 'Required' }]}
                             >
                                 <Input.Password
-                                    prefix={<LockOutlined className="text-slate-400 mr-2" />}
-                                    placeholder="Enter your password"
-                                    className="rounded-xl h-[48px] bg-slate-50 border-slate-200 hover:border-purple-400 focus:border-purple-500 focus:shadow-[0_0_0_2px_rgba(147,51,234,0.1)] transition-all"
+                                    prefix={<LockOutlined className="text-slate-300 mr-2" />}
+                                    placeholder="••••••••"
+                                    className="rounded-2xl h-[56px] bg-white border-slate-100 hover:border-purple-300 focus:border-purple-500 shadow-sm transition-all text-base font-medium"
                                 />
                             </Form.Item>
 
-                            <Form.Item className="mt-6 mb-2">
+                            <Form.Item className="mt-10 mb-2">
                                 <Button
                                     type="primary"
                                     htmlType="submit"
                                     loading={loading}
-                                    className="w-full h-[48px] rounded-xl bg-purple-600 hover:bg-purple-700 shadow-[0_4px_14px_0_rgba(147,51,234,0.39)] hover:shadow-[0_6px_20px_rgba(147,51,234,0.23)] border-0 font-medium text-base transition-all duration-200"
+                                    className="w-full h-[60px] rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 border-0 font-black text-lg tracking-tight shadow-[0_20px_40px_-10px_rgba(147,51,234,0.3)] hover:shadow-[0_25px_50px_-12px_rgba(147,51,234,0.4)] transition-all duration-300 active:scale-[0.98]"
                                 >
-                                    Sign In
+                                    Access Portal
                                 </Button>
                             </Form.Item>
                         </Form>
 
-                        <Divider className="text-slate-300 text-xs uppercase tracking-widest my-6">Demo Credentials</Divider>
-
-                        <div className="space-y-3">
-                            <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center gap-4 hover:bg-slate-50 hover:border-purple-100 transition-colors cursor-default group">
-                                <div className="bg-purple-100/50 p-2.5 rounded-lg text-purple-600 group-hover:bg-purple-100 transition-colors">
+                        <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col items-center gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Operations Control</span>
+                            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100 w-full group transition-colors hover:bg-white hover:shadow-sm">
+                                <div className="bg-purple-100/80 p-2.5 rounded-xl text-purple-600">
                                     <SettingOutlined className="text-lg" />
                                 </div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Admin Role</div>
-                                    <div className="text-sm font-medium text-slate-700">admin@spjimr.org <span className="text-slate-300 mx-1">/</span> admin123</div>
+                                <div className="text-left">
+                                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Global Admin</div>
+                                    <div className="text-sm font-bold text-slate-700 leading-none">admin@spjimr.org <span className="opacity-20 mx-1">/</span> admin123</div>
                                 </div>
                             </div>
                         </div>
-
                     </Card>
                 </div>
             </div>

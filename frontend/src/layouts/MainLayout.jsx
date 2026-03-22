@@ -13,7 +13,8 @@ import {
     LineChartOutlined,
     HistoryOutlined,
     AppstoreOutlined,
-    MenuOutlined
+    MenuOutlined,
+    MessageOutlined
 } from '@ant-design/icons';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 
@@ -49,6 +50,11 @@ const MainLayout = ({ role }) => {
                 key: `/admin/${currentModule}/analytics`,
                 icon: <LineChartOutlined />,
                 label: 'Analytics',
+            },
+            {
+                key: `/admin/${currentModule}/query`,
+                icon: <MessageOutlined />,
+                label: 'Query',
             }
         ] : [
             {

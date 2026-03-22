@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, Skeleton, Button, DatePicker, Space } from 'antd';
-import { LineChartOutlined, BarChartOutlined, HomeOutlined, FilterOutlined, PieChartOutlined, UserOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Typography, Skeleton, Button, DatePicker, Space, Select } from 'antd';
+import {
+    LineChartOutlined, BarChartOutlined, HomeOutlined, FilterOutlined,
+    PieChartOutlined, UserOutlined, DownloadOutlined, DashboardOutlined
+} from '@ant-design/icons';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
-    LineChart, Line, PieChart, Pie, Legend
+    LineChart, Line, PieChart, Pie, Legend, LabelList
 } from 'recharts';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import * as XLSX from 'xlsx';
+import { message } from 'antd';
+
+dayjs.extend(isBetween);
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
+const { Option } = Select;
+
+const ALL_CATEGORIES = ['AC', 'Water Dispenser', 'Cleaning', 'Electrical', 'Washing Machine', 'Washroom Issues', 'WiFi', 'Furniture', 'Fridge', 'Oven', 'Vending Machine', 'Geyser', 'Other'];
 
 // --- HELPERS ---
 const getCategory = (rawCat) => {
@@ -51,18 +62,27 @@ const getAssignedTech = (mappedCategory) => {
     }
 };
 
-const isValidBlock = (block) => ['B26', 'B27', 'B29', 'B30', 'LH'].includes(block);
+const isValidBlock = (block) => {
+    if (!block) return false;
+    const b = block.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return ['B26', 'B27', 'B29', 'B30', 'LH'].includes(b);
+};
 
 const mapApiTicket = (data) => {
     const mappedCategory = getCategory(data.category);
+    const rawBlock = data.hostel_building || (data.room ? data.room.split(' ')[0] : '');
+    const normalizedBlock = rawBlock ? rawBlock.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+    
     return {
         id: data.id,
         category: mappedCategory,
         status: data.status,
         created_at: data.created_at || new Date().toISOString(),
-        hostel_building: isValidBlock(data.hostel_building) ? data.hostel_building : '',
+        hostel_building: isValidBlock(normalizedBlock) ? normalizedBlock : '',
         assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
-        resolved_time_hours: data.status === 'Closed' ? 2 : null // Dummy resolution time for now
+        resolved_time_hours: data.status === 'Closed' ? 2 : null,
+        contact_number: data.phone ? String(data.phone).substring(2) : 'NA',
+        student_name: data.name ? data.name.charAt(0).toUpperCase() + data.name.slice(1).toLowerCase() : 'Anonymous'
     };
 };
 
@@ -74,13 +94,60 @@ const initialTickets = [
     { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Closed', assigned_to: 'Tech 02 (Electrical)', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'day').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: 2, hostel_building: 'B30' },
 ];
 
-const CATEGORY_COLORS = { 'AC': '#4F46E5', 'Water Dispenser': '#0EA5E9', 'Cleaning': '#10B981', 'Electrical': '#F59E0B', 'Washing Machine': '#8B5CF6', 'Washroom Issues': '#EC4899', 'WiFi': '#14B8A6', 'Furniture': '#F97316', 'Fridge': '#3B82F6', 'Oven': '#EF4444', 'Vending Machine': '#FBBF24', 'Geyser': '#06B6D4' };
+const CATEGORY_COLORS = { 
+    'AC': '#a78bfa', // Violet 400
+    'Water Dispenser': '#7dd3fc', // Sky 300
+    'Cleaning': '#6ee7b7', // Emerald 300
+    'Electrical': '#fbbf24', // Amber 400
+    'Washing Machine': '#c084fc', // Purple 400
+    'Washroom Issues': '#f472b6', // Pink 400
+    'WiFi': '#5eead4', // Teal 300
+    'Furniture': '#fb923c', // Orange 400
+    'Fridge': '#93c5fd', // Blue 300
+    'Oven': '#f87171', // Red 400
+    'Vending Machine': '#facc15', // Yellow 400
+    'Geyser': '#67e8f9', // Cyan 300
+    'Other': '#94a3b8' // Slate 400
+};
+
+const CustomPillBar = (props) => {
+    const { x, y, width, height, fill, payload, dataKey } = props;
+    if (width === 0 || height === 0) return null;
+
+    // determine first and last non-zero categories for this specific row (payload)
+    const activeCats = ALL_CATEGORIES.filter(cat => payload[cat] > 0);
+    const isFirst = activeCats[0] === dataKey;
+    const isLast = activeCats[activeCats.length - 1] === dataKey;
+
+    const r = height / 2; // fully rounded ends form a perfect pill
+    const tl = isFirst ? r : 0;
+    const bl = isFirst ? r : 0;
+    const tr = isLast ? r : 0;
+    const br = isLast ? r : 0;
+
+    const path = `
+        M${x + tl},${y}
+        L${x + width - tr},${y}
+        A${tr},${tr} 0 0,1 ${x + width},${y + tr}
+        L${x + width},${y + height - br}
+        A${br},${br} 0 0,1 ${x + width - br},${y + height}
+        L${x + bl},${y + height}
+        A${bl},${bl} 0 0,1 ${x},${y + height - bl}
+        L${x},${y + tl}
+        A${tl},${tl} 0 0,1 ${x + tl},${y} Z
+    `;
+
+    return <path d={path} fill={fill} stroke="#ffffff" strokeWidth={2} className="transition-all duration-300 hover:brightness-110 drop-shadow-sm" />;
+};
 
 const AnalyticsDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [tickets, setTickets] = useState(initialTickets);
-    const [dateFilter, setDateFilter] = useState('30D'); // '7D', '30D', or 'CUSTOM'
+    const [dateFilter, setDateFilter] = useState('7D'); // '1D', '7D', '30D', or 'CUSTOM'
     const [customDateRange, setCustomDateRange] = useState([null, null]);
+    const [hoveredCategory, setHoveredCategory] = useState(null);
+    const [blockFilter, setBlockFilter] = useState('All');
+    const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
         const fetchTickets = async () => {
@@ -99,26 +166,36 @@ const AnalyticsDashboard = () => {
         };
 
         fetchTickets();
+
+        const handleScroll = () => {
+            const scrolled = window.scrollY > 20;
+            setIsScrolled(scrolled);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
     // Filter by Date
     const filteredTickets = tickets.filter(t => {
         if (!t.created_at) return true;
+        
         const ticketDate = dayjs(t.created_at);
-        if (dateFilter === '7D') {
+        if (dateFilter === '1D') {
+            return dayjs().diff(ticketDate, 'hour') <= 24;
+        } else if (dateFilter === '7D') {
             return dayjs().diff(ticketDate, 'day') <= 7;
         } else if (dateFilter === '30D') {
             return dayjs().diff(ticketDate, 'day') <= 30;
         } else if (dateFilter === 'CUSTOM' && customDateRange[0] && customDateRange[1]) {
-            return ticketDate.isBetween(customDateRange[0], customDateRange[1], 'day', '[]');
+            return ticketDate.isBetween(customDateRange[0].startOf('day'), customDateRange[1].endOf('day'), null, '[]');
         }
         return true;
     });
 
-    // 1. Complains by Category
+    // 1. Active Issues by Category
     const getComplainsByCategory = () => {
         const counts = {};
-        filteredTickets.forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
+        filteredTickets.filter(t => t.status !== 'Closed').forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
         return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).sort((a, b) => b.count - a.count);
     };
     const complainsByCategoryData = getComplainsByCategory();
@@ -126,7 +203,11 @@ const AnalyticsDashboard = () => {
     // 1b. Closed Issues by Category
     const getClosedIssuesByCategory = () => {
         const counts = {};
-        filteredTickets.filter(t => t.status === 'Closed').forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
+        const filteredByBlock = blockFilter === 'All' 
+            ? filteredTickets 
+            : filteredTickets.filter(t => t.hostel_building === blockFilter);
+
+        filteredByBlock.filter(t => t.status === 'Closed').forEach(t => counts[t.category] = (counts[t.category] || 0) + 1);
         return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).sort((a, b) => b.count - a.count);
     };
     const closedIssuesByCategoryData = getClosedIssuesByCategory();
@@ -143,19 +224,26 @@ const AnalyticsDashboard = () => {
     };
     const tasksCompletedByTechData = getTasksCompletedByTech();
 
-    const TECH_COLORS = ['#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#3B82F6', '#EF4444', '#FBBF24', '#06B6D4'];
+    const TECH_COLORS = ['#a78bfa', '#7dd3fc', '#6ee7b7', '#fbbf24', '#c084fc', '#f472b6', '#5eead4', '#fb923c', '#93c5fd', '#f87171', '#facc15', '#67e8f9'];
 
-    // 2. Complains by Block (B26, B27, B29, B30, LH only)
-    const getComplainsByBlock = () => {
-        const counts = { 'B26': 0, 'B27': 0, 'B29': 0, 'B30': 0, 'LH': 0 };
-        filteredTickets.forEach(t => {
-            if (isValidBlock(t.hostel_building)) {
-                counts[t.hostel_building] += 1;
-            }
+    // 2. Categorized Complains by Block (Stacked Horizontal)
+    const getStackedBlockData = () => {
+        const coreBlocks = ['B26', 'B27', 'B29', 'LH', 'B30'];
+        const dynamicBlocks = [...new Set(filteredTickets.filter(t => t.hostel_building && !coreBlocks.includes(t.hostel_building)).map(t => t.hostel_building))];
+        const allBlocks = [...coreBlocks, ...dynamicBlocks];
+
+        const data = allBlocks.map(block => {
+            const entry = { name: block, total: 0, totalLabel: 0 };
+            ALL_CATEGORIES.forEach(cat => entry[cat] = 0);
+            filteredTickets.filter(t => t.hostel_building === block && t.status !== 'Closed').forEach(t => {
+                entry[t.category] = (entry[t.category] || 0) + 1;
+                entry.total++;
+            });
+            return entry;
         });
-        return Object.keys(counts).map(key => ({ name: key, count: counts[key] })).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+        return data;
     };
-    const complainsByBlockData = getComplainsByBlock();
+    const stackedBlockData = getStackedBlockData();
 
     // 3. Average Resolution Time Trend (Pseudo-random based on dates for visual aesthetics)
     const getAvgResolutionData = () => {
@@ -205,6 +293,60 @@ const AnalyticsDashboard = () => {
     };
     const resolutionTrendData = getAvgResolutionData();
 
+    const handleExportAllAnalytics = () => {
+        const wb = XLSX.utils.book_new();
+
+        // 1. Active Issues by Category
+        const catWS = XLSX.utils.json_to_sheet(complainsByCategoryData);
+        XLSX.utils.book_append_sheet(wb, catWS, "Active Issues by Category");
+
+        // 2. Tasks Completed by Technician
+        const techWS = XLSX.utils.json_to_sheet(tasksCompletedByTechData);
+        XLSX.utils.book_append_sheet(wb, techWS, "Tasks by Technician");
+
+        // 3. Closed Issues (Block wise + Total)
+        const blocks = ['B26', 'B27', 'B29', 'LH', 'B30'];
+        const closedData = blocks.map(block => ({
+            Block: block,
+            'Closed Issues Count': filteredTickets.filter(t => t.hostel_building === block && t.status === 'Closed').length
+        }));
+        closedData.push({
+            Block: 'Total All Categories',
+            'Closed Issues Count': filteredTickets.filter(t => t.status === 'Closed').length
+        });
+        const closedWS = XLSX.utils.json_to_sheet(closedData);
+        XLSX.utils.book_append_sheet(wb, closedWS, "Closed Issues");
+
+        // 4. Issue Breakdown Block Wise (Pivot Style)
+        const pivotData = blocks.map(block => {
+            const entry = { Block: block };
+            let rowTotal = 0;
+            ALL_CATEGORIES.forEach(cat => {
+                const count = filteredTickets.filter(t => t.hostel_building === block && t.category === cat && t.status !== 'Closed').length;
+                entry[cat] = count;
+                rowTotal += count;
+            });
+            entry['Grand Total'] = rowTotal;
+            return entry;
+        });
+        // Add Total row
+        const totalRow = { Block: 'Total' };
+        let grandTotal = 0;
+        ALL_CATEGORIES.forEach(cat => {
+            const total = filteredTickets.filter(t => t.category === cat && t.status !== 'Closed').length;
+            totalRow[cat] = total;
+            grandTotal += total;
+        });
+        totalRow['Grand Total'] = grandTotal;
+        pivotData.push(totalRow);
+        const pivotWS = XLSX.utils.json_to_sheet(pivotData);
+        XLSX.utils.book_append_sheet(wb, pivotWS, "Active Issue Breakdown");
+
+        // 5. Raw Data was here, removed as requested to maintain 4 tabs
+        XLSX.writeFile(wb, `Campus_Companion_Full_Analytics_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+        message.success('Multi-tab Analytics Report generated');
+    };
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -213,51 +355,69 @@ const AnalyticsDashboard = () => {
             </div>
         );
     }
-
     return (
-        <div className="space-y-8 animate-fade-in-up max-w-7xl mx-auto pb-10">
-            {/* Premium Header Area */}
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-gradient-to-r from-white to-slate-50 p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div>
-                    <Title level={1} className="m-0 text-slate-800 tracking-tight" style={{ fontSize: '28px' }}>Hostel Analytics</Title>
-                    <Text type="secondary" className="text-base text-slate-500">Overview of ticket distribution and resolution efficiency.</Text>
-                </div>
+        <div className="space-y-4 animate-fade-in-up max-w-7xl mx-auto pb-10 relative">
+            {/* Floating Translucent Time Filter - Scroll Adaptive */}
+            <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[1000] mx-auto w-max mb-4 transition-all duration-300 ${isScrolled ? 'opacity-30 blur-[2px]' : 'opacity-100'} hover:!opacity-100 hover:!blur-0`}>
+                <div className="bg-white/70 backdrop-blur-xl rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/40 p-1.5 flex gap-1 items-center">
+                    <Button
+                        type={dateFilter === '1D' ? 'primary' : 'text'}
+                        onClick={() => setDateFilter('1D')}
+                        className={dateFilter === '1D' ? 'bg-indigo-500 shadow-sm rounded-full px-5 text-white font-medium hover:!bg-indigo-600' : 'rounded-full px-5 text-slate-600 font-medium hover:bg-white/50 border-transparent bg-transparent'}
+                    >
+                        1 Day
+                    </Button>
+                    <Button
+                        type={dateFilter === '7D' ? 'primary' : 'text'}
+                        onClick={() => setDateFilter('7D')}
+                        className={dateFilter === '7D' ? 'bg-indigo-500 shadow-sm rounded-full px-5 text-white font-medium hover:!bg-indigo-600' : 'rounded-full px-5 text-slate-600 font-medium hover:bg-white/50 border-transparent bg-transparent'}
+                    >
+                        1 Week
+                    </Button>
+                    <Button
+                        type={dateFilter === '30D' ? 'primary' : 'text'}
+                        onClick={() => setDateFilter('30D')}
+                        className={dateFilter === '30D' ? 'bg-indigo-500 shadow-sm rounded-full px-5 text-white font-medium hover:!bg-indigo-600' : 'rounded-full px-5 text-slate-700 font-medium hover:bg-white/70 border-transparent bg-transparent bg-white/30'}
+                    >
+                        1 Month
+                    </Button>
 
-                <div className="flex flex-wrap items-center gap-4 bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 w-full xl:w-auto">
-                    <FilterOutlined className="text-indigo-500" />
-                    <span className="font-semibold text-slate-600 mr-2">Time Range:</span>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                        <Button
-                            type={dateFilter === '7D' ? 'primary' : 'default'}
-                            onClick={() => setDateFilter('7D')}
-                            className={dateFilter === '7D' ? 'bg-indigo-600 border-indigo-600 shadow-sm font-medium rounded-lg' : 'font-medium text-slate-600 rounded-lg'}
-                        >
-                            Last 7 Days
-                        </Button>
-                        <Button
-                            type={dateFilter === '30D' ? 'primary' : 'default'}
-                            onClick={() => setDateFilter('30D')}
-                            className={dateFilter === '30D' ? 'bg-indigo-600 border-indigo-600 shadow-sm font-medium rounded-lg' : 'font-medium text-slate-600 rounded-lg'}
-                        >
-                            Last 30 Days
-                        </Button>
-                        <Button
-                            type={dateFilter === 'CUSTOM' ? 'primary' : 'default'}
-                            onClick={() => setDateFilter('CUSTOM')}
-                            className={dateFilter === 'CUSTOM' ? 'bg-indigo-600 border-indigo-600 shadow-sm font-medium rounded-lg transition-none' : 'font-medium text-slate-600 rounded-lg transition-none'}
-                        >
-                            Custom
-                        </Button>
-                    </div>
-
+                    <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                    <Button
+                        type={dateFilter === 'CUSTOM' ? 'primary' : 'text'}
+                        onClick={() => setDateFilter('CUSTOM')}
+                        className={dateFilter === 'CUSTOM' ? 'bg-indigo-500 shadow-sm rounded-full px-4 text-white font-medium hover:!bg-indigo-600' : 'rounded-full px-4 text-slate-700 font-medium hover:bg-white/70 border-transparent bg-transparent bg-white/30'}
+                    >
+                        Custom
+                    </Button>
                     {dateFilter === 'CUSTOM' && (
                         <RangePicker
                             onChange={(dates) => setCustomDateRange(dates || [null, null])}
                             value={customDateRange}
-                            className="ml-0 sm:ml-2 mt-2 sm:mt-0 rounded-lg transition-none"
+                            className="ml-1 rounded-full border-white/60 bg-white/50 backdrop-blur-sm"
+                            size="middle"
                         />
                     )}
+                </div>
+            </div>
+
+            {/* Premium Header Area */}
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-gradient-to-r from-white to-slate-50 p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div>
+                    <Title level={1} className="m-0 text-slate-800 tracking-tight" style={{ fontSize: '28px' }}>Hostel Analytics</Title>
+                    <div className="mt-1">
+                        <Text type="secondary" className="text-base text-slate-500">Overview of ticket distribution and resolution efficiency.</Text>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 w-full xl:w-auto">
+                    
+                    <Button
+                        icon={<DownloadOutlined className="text-lg" />}
+                        onClick={handleExportAllAnalytics}
+                        className="rounded-xl shadow-sm border-slate-200 text-indigo-600 font-medium hover:text-indigo-700 hover:border-indigo-300 h-[46px] w-[46px] flex items-center justify-center bg-white"
+                        title="Download Analytics Data"
+                    />
                 </div>
             </div>
 
@@ -265,8 +425,8 @@ const AnalyticsDashboard = () => {
                 {/* Graph 1: Complains by Category (Pie Chart) */}
                 <Col xs={24} lg={8}>
                     <Card
-                        title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><PieChartOutlined className="text-indigo-500" /> Complains by Category</span>}
-                        className="shadow-sm border-slate-200 aspect-square flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><PieChartOutlined className="text-indigo-500" /> Active Issues by Category</span>}
+                        className="shadow-sm border-slate-200 h-[400px] flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
                     >
                         <div className="w-full h-full flex items-center justify-center relative">
@@ -302,42 +462,99 @@ const AnalyticsDashboard = () => {
                     </Card>
                 </Col>
 
-                {/* Graph 2: Complains by Block */}
-                <Col xs={24} lg={8}>
+                {/* Graph 6: Issues Breakdown by Block */}
+                <Col xs={24} lg={16}>
                     <Card
-                        title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><HomeOutlined className="text-amber-500" /> Complains by Block</span>}
-                        className="shadow-sm border-slate-200 aspect-square flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><BarChartOutlined className="text-indigo-500" /> Active Issues breakdown by Block</span>}
+                        className="shadow-sm border-slate-200 h-[400px] flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
                     >
-                        <div className="w-full h-full flex items-center justify-center pt-4">
+                        <div className="w-full flex-grow relative min-h-[250px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={complainsByBlockData} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                    <XAxis
-                                        dataKey="name"
-                                        tick={{ fontSize: 13, fill: '#475569', fontWeight: 500 }}
-                                        axisLine={false}
-                                        tickLine={false}
+                                <BarChart data={stackedBlockData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E2E8F0" />
+                                    <XAxis type="number" hide />
+                                    <YAxis 
+                                        type="category" 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#475569', fontSize: 13, fontWeight: 600 }} 
+                                        width={40}
                                     />
-                                    <YAxis
-                                        allowDecimals={false}
-                                        tick={{ fontSize: 13, fill: '#475569' }}
-                                        axisLine={false}
-                                        tickLine={false}
+                                    <RechartsTooltip 
+                                        cursor={{ fill: '#F8FAFC' }} 
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                                        itemStyle={{ fontWeight: 600, padding: '2px 0' }}
+                                        labelStyle={{ fontWeight: 700, color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}
+                                        formatter={(value, name) => [value, name]}
+                                        filterNull={true}
+                                        itemSorter={() => 1}
+                                        wrapperStyle={{ zIndex: 100 }}
+                                        content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                const hoverItem = hoveredCategory ? payload.find(p => p.name === hoveredCategory) : null;
+                                                const itemsToShow = hoverItem ? [hoverItem] : payload.filter(p => p.value > 0).sort((a,b) => b.value - a.value);
+                                                
+                                                if (itemsToShow.length === 0) return null;
+                                                
+                                                return (
+                                                    <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100">
+                                                        <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">{label} Block</p>
+                                                        {itemsToShow.map((entry, index) => (
+                                                            <div key={index} className="flex items-center justify-between gap-4 py-0.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                                                    <span className="text-sm font-medium text-slate-600">{entry.name}</span>
+                                                                </div>
+                                                                <span className="text-sm font-bold text-slate-800">{entry.value}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
                                     />
-                                    <RechartsTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} itemStyle={{ fontWeight: 600 }} />
-                                    <Bar dataKey="count" fill="#A855F7" radius={[6, 6, 0, 0]} barSize={50} className="cursor-pointer" />
+                                    <Legend 
+                                        layout="horizontal" 
+                                        verticalAlign="top" 
+                                        align="center"
+                                        wrapperStyle={{ paddingBottom: '20px', fontSize: '11px', fontWeight: 600 }}
+                                        iconType="circle"
+                                    />
+                                    {ALL_CATEGORIES.map((cat, idx) => {
+                                        return (
+                                            <Bar 
+                                                key={cat} 
+                                                dataKey={cat} 
+                                                stackId="a" 
+                                                fill={CATEGORY_COLORS[cat] || '#94A3B8'} 
+                                                shape={<CustomPillBar dataKey={cat} />}
+                                                barSize={32}
+                                                onMouseEnter={() => setHoveredCategory(cat)}
+                                                onMouseLeave={() => setHoveredCategory(null)}
+                                                animationDuration={1500}
+                                                animationEasing="ease-out"
+                                            />
+                                        );
+                                    })}
+                                    <Bar dataKey="totalLabel" stackId="a" fill="transparent">
+                                        <LabelList dataKey="total" position="right" offset={12} fill="#334155" fontWeight={800} fontSize={14} />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>
                 </Col>
+            </Row>
 
+            <Row gutter={[24, 24]} justify="center" className="mt-2">
                 {/* Graph 3: Average Resolution Time */}
                 <Col xs={24} lg={8}>
                     <Card
                         title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><LineChartOutlined className="text-emerald-500" /> Resolution Trend</span>}
-                        className="shadow-sm border-slate-200 aspect-square flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        className="shadow-sm border-slate-200 h-[400px] flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
                     >
                         <div className="w-full h-full flex items-center justify-center pt-4">
@@ -365,11 +582,28 @@ const AnalyticsDashboard = () => {
                     </Card>
                 </Col>
 
-                {/* Graph 4: Closed Issues Tracker */}
+                {/* Graph 4: Closed Issues by Category */}
                 <Col xs={24} lg={8}>
                     <Card
-                        title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><PieChartOutlined className="text-emerald-600" /> Closed Issues Tracker</span>}
-                        className="shadow-sm border-slate-200 aspect-square flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        title={<span className="text-slate-800 font-semibold text-base flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis"><PieChartOutlined className="text-emerald-600" /> Closed Issues</span>}
+                        extra={
+                            <Select 
+                                defaultValue="All" 
+                                style={{ width: 100 }} 
+                                onChange={setBlockFilter}
+                                className="rounded-lg"
+                                size="small"
+                                bordered={false}
+                            >
+                                <Option value="All">All Blocks</Option>
+                                <Option value="B26">B26</Option>
+                                <Option value="B27">B27</Option>
+                                <Option value="B29">B29</Option>
+                                <Option value="LH">LH</Option>
+                                <Option value="B30">B30</Option>
+                            </Select>
+                        }
+                        className="shadow-sm border-slate-200 h-[400px] flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
                     >
                         <div className="w-full h-full flex items-center justify-center relative">
@@ -413,7 +647,7 @@ const AnalyticsDashboard = () => {
                 <Col xs={24} lg={8}>
                     <Card
                         title={<span className="text-slate-800 font-semibold text-lg flex items-center gap-2"><UserOutlined className="text-amber-600" /> Tasks Completed by Technician</span>}
-                        className="shadow-sm border-slate-200 aspect-square flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        className="shadow-sm border-slate-200 h-[400px] flex flex-col hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         bodyStyle={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
                     >
                         <div className="w-full h-full flex items-center justify-center relative">
@@ -453,6 +687,7 @@ const AnalyticsDashboard = () => {
                     </Card>
                 </Col>
             </Row>
+
         </div>
     );
 };
