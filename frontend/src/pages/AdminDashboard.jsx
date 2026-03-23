@@ -118,8 +118,8 @@ const mapApiTicket = (data) => {
         description: data.description,
         resolved_time_hours: data.status === 'Closed' ? 2 : null,
         admin_notes: data.admin_comment || '',
-        contact_number: data.phone ? String(data.phone).substring(2) : 'NA',
-        student_name: data.name ? toSentenceCase(data.name) : 'Anonymous'
+        contact_number: data.phone && String(data.phone).trim() ? String(data.phone).substring(2) : 'NA',
+        student_name: data.name && String(data.name).trim() ? toSentenceCase(data.name) : 'Anonymous'
     };
 };
 
@@ -923,16 +923,16 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Contact Number</span>
-                                {editingTicket.phone ? (
-                                    <span className="font-semibold text-slate-700 font-mono">{editingTicket.phone}</span>
+                                {editingTicket.contact_number && editingTicket.contact_number !== 'NA' ? (
+                                    <span className="font-semibold text-slate-700 font-mono">{editingTicket.contact_number}</span>
                                 ) : (
                                     <span className="font-semibold text-slate-400 italic">Not provided</span>
                                 )}
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Name</span>
-                                {editingTicket.name ? (
-                                    <span className="font-semibold text-slate-700">{editingTicket.name}</span>
+                                {editingTicket.student_name && editingTicket.student_name !== 'Anonymous' ? (
+                                    <span className="font-semibold text-slate-700">{editingTicket.student_name}</span>
                                 ) : (
                                     <span className="font-semibold text-slate-400 italic">Not provided</span>
                                 )}

@@ -33,7 +33,7 @@ function App() {
             <Route index element={<Navigate to="tickets" replace />} />
             <Route path="tickets" element={<AdminDashboard />} />
             <Route path="analytics" element={<AnalyticsDashboard />} />
-            <Route path="query" element={<QuerySection />} />
+
           </Route>
 
           <Route path="/technician" element={<MainLayout role="technician" />}>

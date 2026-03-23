@@ -81,8 +81,8 @@ const mapApiTicket = (data) => {
         hostel_building: isValidBlock(normalizedBlock) ? normalizedBlock : '',
         assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
         resolved_time_hours: data.status === 'Closed' ? 2 : null,
-        contact_number: data.phone ? String(data.phone).substring(2) : 'NA',
-        student_name: data.name ? data.name.charAt(0).toUpperCase() + data.name.slice(1).toLowerCase() : 'Anonymous'
+        contact_number: data.phone && String(data.phone).trim() ? String(data.phone).substring(2) : 'NA',
+        student_name: data.name && String(data.name).trim() ? data.name.charAt(0).toUpperCase() + data.name.slice(1).toLowerCase() : 'Anonymous'
     };
 };
 

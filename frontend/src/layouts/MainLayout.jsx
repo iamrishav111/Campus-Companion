@@ -51,11 +51,6 @@ const MainLayout = ({ role }) => {
                 icon: <LineChartOutlined />,
                 label: 'Analytics',
             },
-            {
-                key: `/admin/${currentModule}/query`,
-                icon: <MessageOutlined />,
-                label: 'Query',
-            }
         ] : [
             {
                 key: '/technician/tickets',
@@ -130,25 +125,6 @@ const MainLayout = ({ role }) => {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        {/* Module Selector - Top Right */}
-                        {role === 'admin' && (
-                            <div className="hidden sm:flex items-center bg-slate-50 rounded-xl border border-slate-200 p-1">
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3">Module:</span>
-                                <Select
-                                    value={currentModule}
-                                    onChange={handleModuleChange}
-                                    bordered={false}
-                                    className="w-48 font-medium text-slate-700"
-                                    popupMatchSelectWidth={false}
-                                    options={moduleOptions}
-                                />
-                            </div>
-                        )}
-
-                        <span className="text-slate-400 hover:text-indigo-600 cursor-pointer transition-colors relative">
-                            <BellOutlined className="text-xl" />
-                            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                        </span>
                         <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                             <div className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 rounded-xl transition-colors">
                                 <Avatar
@@ -167,33 +143,9 @@ const MainLayout = ({ role }) => {
                 </Header>
 
                 <Content className="p-6 overflow-auto bg-[#F8FAFC]">
-                    {role === 'admin' && currentModule !== 'hostel' ? (
-                        <div className="flex-grow flex items-center justify-center animate-fade-in-up min-h-[60vh]">
-                            <Card className="max-w-md w-full text-center border-dashed border-2 border-slate-200 bg-slate-50 hover:border-indigo-300 transition-colors shadow-sm">
-                                <Empty
-                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                    description={
-                                        <div className="space-y-2 mt-4">
-                                            <Title level={4} className="text-slate-700 m-0">🚧 Feature coming soon</Title>
-                                            <Text type="secondary" className="block text-center whitespace-normal leading-relaxed">
-                                                The <strong>
-                                                    {currentModule === 'others' ? 'Others' : 'Hostel'}
-                                                </strong> module is currently under development.
-                                            </Text>
-                                        </div>
-                                    }
-                                >
-                                    <Button type="primary" onClick={() => handleModuleChange('hostel')} className="mt-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm border-0 font-medium">
-                                        Return to Hostel
-                                    </Button>
-                                </Empty>
-                            </Card>
-                        </div>
-                    ) : (
-                        <div className="animate-fade-in-up h-full">
-                            <Outlet />
-                        </div>
-                    )}
+                    <div className="animate-fade-in-up h-full">
+                        <Outlet />
+                    </div>
                 </Content>
             </Layout>
         </Layout>
