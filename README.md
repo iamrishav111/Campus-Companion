@@ -1,43 +1,37 @@
-# 🏛 Campus Companion
-A modern, enterprise-grade facility operations dashboard built for educational campuses, seamlessly managing maintenance tickets and analytics across various distinct operational modules (Hostel, Mess, Rec Centre, Academic Block).
+# 🏛 Campus Companion - Hostel Ops Command Center
+
+A premium, enterprise-grade facility operations dashboard built for high-scale hostel management. This platform streamlines maintenance tracking, SLA orchestration, and data-driven decision making.
 
 ---
 
 ## 🚀 Overview
 
-Campus Companion is built with a **Premium SaaS** design aesthetic—prioritizing visual clarity, operational speed, and low cognitive load. The platform serves two distinct primary user roles:
-1. **Facility Administrators:** Comprehensive management of support tickets, SLA tracking, pipeline filtration, and high-level analytical performance reporting.
-2. **Technicians directly on the field:** Mobile-optimized, ultra-fast task completion pipelines stripped of complex analytics, prioritizing immediate actionable items ("What should I do next?").
+Campus Companion is built with a **Premium SaaS** design aesthetic—prioritizing visual clarity, operational speed, and low cognitive load. It serves as a centralized Command Center for tracking, assigning, and analyzing facility maintenance tickets in real-time.
 
 ---
 
-## 💎 Features & Highlights
+## 💎 Key Features
 
-### Admin Interface (`/admin`)
-- **Module-Aware Navigation:** Switch dynamically between distinct operational spheres (Hostel, Mess, Rec Centre) with real-time route syncing (`/admin/:module/tickets`).
-- **Dynamic KPI Engine:** Top-level metrics cards (Total, Open, Assigned, Closed) act as interactive quick-filters for the entire data table organically.
-- **Boardroom-Ready Analytics:** Standalone Analytics Dashboard (`/admin/:module/analytics`) utilizing smooth, stylized *Recharts* for tracking Average Resolution Time, SLA Trends, and Technician output comparisons.
-- **Most Common Issues Pipeline:** A full-width interactive horizontal bar chart natively adjacent to the KPIs, visually communicating where the highest volume of queue congestion lays.
-- **Advanced Ticket Management:** Slide-in Drawer interface allowing for precise SLA tracking, reassignments, priority escalation, and admin notes formatting.
+### Admin Dashboard
+- **Interactive KPI Engine**: Real-time metrics cards (Total, Unassigned, Assigned, Closed) that act as instant filters for the ticket pipeline.
+- **Active Issues Tracker**: Dynamic charts (Category & Block-wise) with interactive filtering—click any bar to drill down into specific data.
+- **Advanced Ticket Management**: Slide-in drawer for precise SLA tracking, technical reassignments, and administrative notes syncing.
+- **SLA Orchestration**: Automatic breach detection and color-coded urgency indicators (🔴 BREACHED, 🟡 URGENT).
 
-### Technician App (`/technician`)
-- **Action-Oriented Strip:** Stripped back to core "Work Summary" fundamentals featuring Donut tracking, Weekly Completion Bars, and bold SLA Risk Tiles (🟢 On Time, 🔴 Overdue).
-- **Mobile-First Pipeline:** Complex tables automatically degrade into touch-friendly stacked *Card* layouts on smaller devices (<768px). 
-- **Lightning Inline Actions:** Allow technicians to instantly "Start Work" or "Mark as Completed" with a single tap inline from the data grid without navigating deeper.
-- **Action Drawer with Proof Upload:** Restricting harmful assignment logic, while maintaining a robust space to input "Work Notes" and upload singular photo-evidence upon job completion.
+### Boardroom Analytics
+- **Visual Insights**: Sophisticated *Recharts* visualizations for Category trends and Block-level issue breakdowns.
+- **Multi-Tab Data Export**: Advanced Excel generation with specialized tabs for Categorized Complains, Technician Performance, and Closed Issue audits.
 
 ---
 
 ## 🛠 Technology Stack
 
-This project was bootstrapped with **Vite** leveraging the **React** template.
-
-- **Frontend Core:** React 18, React Router v6
-- **Build Tool:** Vite (Ultra-fast HMR)
-- **UI Architecture:** Ant Design (v5 Token System) combined iteratively with Tailwind CSS.
-- **Data Visualization:** Recharts (Fully customized tooltip and axis styling).
-- **Date Management:** Day.js (Real-time formatting and SLA `fromNow()` extensions).
-- **Animation System:** Custom CSS keyframes natively extended through Tailwind configurations (`animate-fade-in-up`, `kpi-number`).
+- **Frontend Core**: React 18 (Functional Hooks)
+- **Build Tool**: Vite (Ultra-fast HMR)
+- **UI Architecture**: Ant Design (v5) + Tailwind CSS
+- **Data Visualization**: Recharts (Fully customized)
+- **Business Logic**: **Object-Oriented Service Layer** (ES6 Classes)
+- **Utilities**: Day.js (SLA Tracking), XLSX (Excel Generation)
 
 ---
 
@@ -45,73 +39,49 @@ This project was bootstrapped with **Vite** leveraging the **React** template.
 
 ```text
 Campus Companion/
-├── backend/
-│   ├── app.py                     # Your friend's Python FastAPI server
-│   └── requirements.txt           # Python backend dependencies
-│
-├── frontend/                      # The React Frontend (Vite)
-│   ├── index.html                 # Main HTML entry
-│   ├── package.json               # Node.js dependencies & scripts
-│   ├── vite.config.js             # Vite bundler configuration
-│   ├── eslint.config.js           # Linter configuration
-│   └── src/
-│       ├── main.jsx               # React application mounting point
-│       ├── App.jsx                # Global Router & Navigation setup
-│       ├── index.css              # Global Tailwind CSS styles
-│       ├── layouts/
-│       │   └── MainLayout.jsx     # Global Sidebar & Top Navigation wrapper
-│       └── pages/
-│           ├── Login.jsx              # Admin Access Portal
-│           ├── AdminDashboard.jsx     # Main Ticket Pipeline
-│           ├── TechnicianDashboard.jsx# Technician-facing task board
-│           ├── AnalyticsDashboard.jsx # Advanced Metrics & Insights
-│           └── TechnicianHistory.jsx  # Technician's resolved tickets log
-│
-└── README.md                      # Project documentation
+├── src/
+│   ├── assets/             # Branding & Official SPJIMR Logos
+│   ├── layouts/            # MainLayout (Navigation & Sidebar)
+│   ├── pages/              # Core Views (Login, Admin, Analytics)
+│   ├── services/           # OOP Service Layer (TicketService.js)
+│   ├── styles/             # Tailwind & Global Aesthetics
+│   └── App.jsx             # Global Router & Configuration
+├── public/                 # Favicon & Static Assets
+├── index.html              # Main Entry
+└── README.md               # Project Documentation
 ```
 
 ---
 
-## 💻 Running the Project Locally
+## 💻 Getting Started
 
-To preview Campus Companion seamlessly on your local machine:
-
-1. **Verify your Node version** (Node.js 18+ recommended).
-2. **Navigate into the Frontend directory:**
-   ```bash
-   cd frontend
-   ```
-3. **Install exact dependencies:**
-   ```bash
-   npm install
-   ```
-4. **Boot up the Vite Dev Server:**
-   ```bash
-   npm run dev
-   ```
-5. **Open** `http://localhost:5173` (or the port Vite issues).
-
-### Dummy Login Credentials
-Use the following strict credentials to bypass the gateway:
-
-* **Administrator View:**
-  * Email: `admin@spjimr.org`
-  * Password: `admin123`
-
-* **Technician View:**
-  * Email: `tech@spjimr.org`
-  * Password: `tech123`
-
-*(Note: These credentials explicitly render visually vastly different component layouts utilizing role-based access logic natively).*
-
----
-
-## 📦 Building for Production
-
-To compile highly optimized, minified static files ready for standard server deployment:
-
+### 1. Installation
+Navigate to the frontend directory and install dependencies:
 ```bash
-cd frontend
+npm install
+```
+
+### 2. Development
+Run the local development server:
+```bash
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
+
+### 3. Production Build
+Generate an optimized production bundle:
+```bash
 npm run build
 ```
-Vite will silently generate the minified application chunk files into the `frontend/dist` directory.
+
+---
+
+## 🔐 Access Credentials
+
+Use these credentials to access the Administrator Portal:
+
+* **Email**: `admin@spjimr.org`
+* **Password**: `admin123`
+
+---
+**Official Hostel Ops Team Submission** 🎓
