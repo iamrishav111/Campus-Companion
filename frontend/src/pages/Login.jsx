@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Button, Input, Form, Typography, Divider, Alert } from 'antd';
 import { UserOutlined, LockOutlined, ToolOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 const { Title, Text } = Typography;
 
@@ -45,7 +46,7 @@ const Login = () => {
                 {/* Branding Side - High-End Editorial Style */}
                 <div className="w-full lg:w-1/2 flex flex-col items-start text-left space-y-8 animate-fade-in-up">
                     <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-md rounded-full border border-white/80 shadow-sm">
-                        <SettingOutlined className="text-purple-600 font-bold" />
+                        <img src={logo} alt="Logo" className="w-6 h-6 object-contain" />
                         <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Facility Command Center</span>
                     </div>
 

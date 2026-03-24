@@ -1,16 +1,65 @@
-# React + Vite
+# Campus Companion - Hostel Ops Command Center
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, real-time facility orchestration platform built for high-scale hostel management.
 
-Currently, two official plugins are available:
+## 🚀 Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Campus Companion streamlines facility management by providing a centralized dashboard for tracking, assigning, and analyzing maintenance tickets. It features a premium UI, real-time data sync, and comprehensive analytics.
 
-## React Compiler
+## 🛠 Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 18 with Vite
+- **UI Library**: Ant Design (antd)
+- **Styling**: Tailwind CSS + Glassmorphism
+- **Charts**: Recharts
+- **Data Handling**: Dayjs (SLA Tracking), XLSX (Excel Exports)
+- **Architecture**: Object-Oriented Service Layer (ES6 Classes)
 
-## Expanding the ESLint configuration
+## 📁 Project Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```text
+frontend/
+├── src/
+│   ├── assets/             # Branding & Static Assets (Logos, Icons)
+│   ├── layouts/            # MainLayout (Navigation, Header, Sidebar)
+│   ├── pages/              # Core Views (Login, Admin, Analytics)
+│   ├── services/           # OOP Service Layer (TicketService.js)
+│   ├── styles/             # Global CSS & Tailwind configuration
+│   └── App.jsx             # Main Routing & Entry Point
+├── public/                 # Static Public Assets (Favicon)
+├── index.html              # Entry HTML
+└── README.md               # Documentation
+```
+
+## ⚙️ Installation & Setup
+
+### 1. Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+
+### 2. Install Dependencies
+Navigate to the frontend directory and run:
+```bash
+npm install
+```
+
+### 3. Run Development Server
+```bash
+npm run dev
+```
+The application will be available at `http://localhost:5173`.
+
+### 4. Build for Production
+```bash
+npm run build
+```
+
+## 🛡 Business Logic & Scalability
+
+The project follows an **Object-Oriented Programming (OOP)** approach by centralizing business logic in `src/services/TicketService.js`. This allows for:
+- **Encapsulation**: All API mapping and data transformations are handled in one place.
+- **Consistency**: The same data models are used across Admin and Analytics views.
+- **Scalability**: Adding new features (e.g., automated technician assignment) only requires updating the service layer.
+
+---
+**Official Hostel Ops Team Submission** 🎓

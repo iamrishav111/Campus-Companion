@@ -25,6 +25,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import isBetween from 'dayjs/plugin/isBetween';
 import minMax from 'dayjs/plugin/minMax';
 import * as XLSX from 'xlsx';
+import TicketService from '../services/TicketService';
 
 dayjs.extend(relativeTime);
 dayjs.extend(isBetween);
@@ -35,93 +36,8 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-// --- DUMMY DATA SERVICES ---
-const generateDummyTickets = () => {
-    return [
-        { id: 'TKT-1001', category: 'AC', summary: 'AC not cooling in Room 201', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(2, 'hour').toISOString(), created_at: dayjs().subtract(3, 'hour').toISOString(), urgency: 'High', room: '201', description: 'The AC blows warm air.', hostel_building: 'B26' },
-        { id: 'TKT-1002', category: 'Water Dispenser', summary: 'Water leaking on 3rd floor', status: 'Assigned', assigned_to: 'Tech 04 (Water Dispenser)', sla_deadline: dayjs().subtract(1, 'hour').toISOString(), created_at: dayjs().subtract(5, 'hour').toISOString(), urgency: 'High', room: '3rd Floor Lobby', description: 'Massive puddle forming.', resolved_time_hours: null, hostel_building: 'B27' },
-        { id: 'TKT-1003', category: 'Cleaning', summary: 'Room 405 needs deep clean', status: 'Closed', assigned_to: 'Tech 06 (Cleaning)', sla_deadline: dayjs().subtract(1, 'day').toISOString(), created_at: dayjs().subtract(2, 'day').toISOString(), urgency: 'Low', room: '405', description: 'Dust everywhere post holiday.', resolved_time_hours: 4, hostel_building: 'LH' },
-        { id: 'TKT-1004', category: 'AC', summary: 'Strange noise from vent', status: 'Open', assigned_to: null, sla_deadline: dayjs().add(5, 'hour').toISOString(), created_at: dayjs().subtract(1, 'hour').toISOString(), urgency: 'Medium', room: '102', description: 'Clicking sound constantly.', hostel_building: 'B29' },
-        { id: 'TKT-1005', category: 'Electrical', summary: 'Tube light broken', status: 'Closed', assigned_to: 'Tech 02 (Electrical)', sla_deadline: dayjs().add(1, 'day').toISOString(), created_at: dayjs().subtract(4, 'day').toISOString(), urgency: 'Low', room: 'Library', description: 'Flickers then dies.', resolved_time_hours: 2, hostel_building: 'B30' },
-    ];
-};
-
-const initialTickets = generateDummyTickets();
-
-// --- API HELPERS ---
-const getCategory = (rawCat) => {
-    if (!rawCat) return 'Other';
-    const lower = rawCat.toLowerCase();
-
-    // Strict mapping 
-    if (lower.includes('cleaning')) return 'Cleaning';
-    if (lower.includes('wash_mach') || lower.includes('washing')) return 'Washing Machine';
-    if (lower.includes('vending')) return 'Vending Machine';
-    if (lower.includes('geyser')) return 'Geyser';
-    if (lower.includes('oven')) return 'Oven';
-    if (lower.includes('fridge')) return 'Fridge';
-    if (lower.includes('water_disp') || lower.includes('dispenser') || lower.includes('cooler')) return 'Water Dispenser';
-    if (lower.includes('washroom') || lower.includes('plumbing') || lower.includes('leak')) return 'Washroom Issues';
-    if (lower.includes('wifi') || lower.includes('internet') || lower.includes('network')) return 'WiFi';
-    if (lower.includes('ac') || lower.includes('air_cond')) return 'AC';
-    if (lower.includes('electrical') || lower.includes('light') || lower.includes('fan')) return 'Electrical';
-    if (lower.includes('furniture') || lower.includes('bed') || lower.includes('chair') || lower.includes('table')) return 'Furniture';
-    if (lower.includes('elevator') || lower.includes('lift')) return 'Electrical'; // Fallback
-
-    return 'Other';
-};
-
-const getAssignedTech = (mappedCategory) => {
-    switch (mappedCategory) {
-        case 'AC': return 'Tech 01 (AC)';
-        case 'Electrical': return 'Tech 02 (Electrical)';
-        case 'Washroom Issues': return 'Tech 03 (Washroom Issues)';
-        case 'Water Dispenser': return 'Tech 04 (Water Dispenser)';
-        case 'Washing Machine': return 'Tech 05 (Washing Machine)';
-        case 'Cleaning': return 'Tech 06 (Cleaning)';
-        case 'WiFi': return 'Tech 07 (WiFi)';
-        case 'Vending Machine': return 'Tech 08 (Vending Machine)';
-        case 'Geyser': return 'Tech 09 (Geyser)';
-        case 'Oven': return 'Tech 10 (Oven)';
-        case 'Fridge': return 'Tech 11 (Fridge)';
-        case 'Furniture': return 'Tech 12 (Furniture)';
-        default: return `Tech 00 (${mappedCategory})`;
-    }
-};
-
-const isValidBlock = (block) => {
-    if (!block) return false;
-    const b = block.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return ['B26', 'B27', 'B29', 'B30', 'LH'].includes(b);
-};
-
-const mapApiTicket = (data) => {
-    const mappedCategory = getCategory(data.category);
-    const toSentenceCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
-    
-    // Robust block matching
-    const rawBlock = data.hostel_building || (data.room ? data.room.split(' ')[0] : '');
-    const normalizedBlock = rawBlock ? rawBlock.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
-
-    return {
-        id: data.id.substring(0, 8).toUpperCase(), // Simplify UUID
-        raw_id: data.id, // Backend exact ID
-        category: mappedCategory,
-        summary: `${toSentenceCase(data.description)} in ${data.room}`,
-        status: data.status,
-        assigned_to: data.assigned_to || getAssignedTech(mappedCategory),
-        sla_deadline: data.created_at ? dayjs(data.created_at).add(4, 'hour').toISOString() : dayjs().add(2, 'hour').toISOString(), // Setup dummy SLA based on creation for demo
-        created_at: data.created_at || new Date().toISOString(),
-        urgency: data.priority ? toSentenceCase(data.priority) : 'Medium',
-        room: data.room,
-        hostel_building: isValidBlock(normalizedBlock) ? normalizedBlock : '',
-        description: data.description,
-        resolved_time_hours: data.status === 'Closed' ? 2 : null,
-        admin_notes: data.admin_comment || '',
-        contact_number: data.phone && String(data.phone).trim() ? String(data.phone).substring(2) : 'NA',
-        student_name: data.name && String(data.name).trim() ? toSentenceCase(data.name) : 'Anonymous'
-    };
-};
+// --- DATA INITIALIZATION ---
+const initialTickets = []; // Start empty, will be populated by Service
 
 const AdminDashboard = () => {
     const [tickets, setTickets] = useState(initialTickets);
@@ -150,15 +66,10 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchTickets = async () => {
             try {
-                const response = await fetch('https://campus-companion-backend-nk3b.onrender.com/tickets');
-                if (response.ok) {
-                    const data = await response.json();
-                    const liveTickets = data.map(mapApiTicket);
-                    setTickets(liveTickets);
-                }
+                const liveTickets = await TicketService.fetchTickets();
+                setTickets(liveTickets);
             } catch (error) {
                 console.error("Failed to fetch live tickets", error);
-                // Fallback is just maintaining initialTickets
             } finally {
                 setLoading(false);
             }
@@ -212,7 +123,7 @@ const AdminDashboard = () => {
         if (chartView === 'Block') {
             ['B26', 'B27', 'B29', 'LH', 'B30'].forEach(b => groups[b] = { name: b, count: 0, Assigned: 0, UnAssigned: 0 });
             listToUse.forEach(t => { 
-                const b = t.hostel_building || (isValidBlock(t.room) ? t.room : '');
+                const b = t.hostel_building || (TicketService.isValidBlock(t.room) ? t.room : '');
                 if (groups[b]) {
                     groups[b].count++;
                     if (t.status === 'Assigned') groups[b].Assigned++;
@@ -289,8 +200,14 @@ const AdminDashboard = () => {
         const matchBlock = filterBlock.length > 0 ? filterBlock.includes(t.hostel_building) : true;
         const matchStatus = filterStatus.length > 0 ? filterStatus.includes(t.status) : true;
         const matchTech = filterTechnician.length > 0 ? filterTechnician.includes(t.assigned_to) : true;
-        const matchSearch = searchText ? t.id.toLowerCase().includes(searchText.toLowerCase()) || t.summary.toLowerCase().includes(searchText.toLowerCase()) || (t.room && t.room.toLowerCase().includes(searchText.toLowerCase())) : true;
-        const matchKpi = activeKpiFilter && activeKpiFilter !== 'Total' ? t.status === activeKpiFilter : true;
+        const matchSearch = searchText ? (
+            (t.id && t.id.toLowerCase().includes(searchText.toLowerCase())) || 
+            (t.summary && t.summary.toLowerCase().includes(searchText.toLowerCase())) || 
+            (t.room && t.room.toLowerCase().includes(searchText.toLowerCase()))
+        ) : true;
+        const matchKpi = activeKpiFilter && activeKpiFilter !== 'Total' ? (
+            activeKpiFilter === 'Unassigned' ? t.status === 'Open' : t.status === activeKpiFilter
+        ) : true;
 
         return matchDate && matchCat && matchBlock && matchStatus && matchTech && matchSearch && matchKpi;
     });

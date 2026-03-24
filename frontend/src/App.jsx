@@ -7,7 +7,6 @@ import AdminDashboard from './pages/AdminDashboard';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import TechnicianDashboard from './pages/TechnicianDashboard';
 import TechnicianHistory from './pages/TechnicianHistory';
-import QuerySection from './pages/QuerySection';
 
 function App() {
   return (

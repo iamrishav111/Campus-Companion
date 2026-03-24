@@ -17,6 +17,7 @@ import {
     MessageOutlined
 } from '@ant-design/icons';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -100,8 +101,8 @@ const MainLayout = ({ role }) => {
                 collapsedWidth="0"
             >
                 <div className="h-16 flex items-center px-6 border-b border-slate-100 gap-3 mb-4 transition-colors hover:bg-slate-50">
-                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                        <SettingOutlined />
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden border border-slate-100 p-0.5">
+                        <img src={logo} alt="Logo" className="w-full h-full object-contain" />
                     </div>
                     <span className="font-bold text-lg text-slate-800 tracking-tight">Campus Companion</span>
                 </div>
